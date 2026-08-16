@@ -1,0 +1,33 @@
+# Tujia session — copy this file to cookies.txt and fill in your own values.
+#
+# cookies.txt is gitignored: it contains a real logged-in session. Never commit it.
+#
+# Where to get these:
+#   1. open https://m.tujia.com in a browser and log in
+#   2. DevTools → Application → Cookies → https://m.tujia.com
+#   3. copy the values below
+#
+# Format: one name=value per line, # for comments. A single pasted
+# "Cookie: a=1; b=2" header line also works.
+#
+# The file is re-read whenever it changes, so you can refresh an expired
+# session without restarting the server.
+#
+# Override the path with TUJIA_COOKIES_FILE.
+
+# --- required: identifies the logged-in user -------------------------------
+tujia.com_PortalContext_UserToken=REPLACE_ME
+tujia.com_PortalContext_UserId=REPLACE_ME
+
+# --- required: the anonymous session ---------------------------------------
+_fas_uuid=REPLACE_ME
+_fas_session_id=REPLACE_ME
+
+# --- channel context, safe to copy verbatim --------------------------------
+tj_channel_id=tujia
+clientAgent=T_h5
+personalRecommend=true
+
+# --- stay dates: overridden per search, so these values do not matter ------
+tujia.com_MobileContext_StartDate=2026-10-10
+tujia.com_MobileContext_EndDate=2026-11-05

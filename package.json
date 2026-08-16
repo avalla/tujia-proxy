@@ -1,0 +1,30 @@
+{
+  "name": "tujia-proxy-en",
+  "version": "1.0.0",
+  "description": "English proxy for Tujia API with Canton Fair filters",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir=dist --target=bun",
+    "catalog": "bun run scripts/generate-catalog.ts",
+    "scraper": "bun run src/scraper-cli.ts",
+    "scraper:headed": "HEADED=1 bun run src/scraper-cli.ts",
+    "mock": "bun run src/mocks/sample.ts"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0",
+    "node-cache": "^5.1.2",
+    "playwright": "^1.46.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "bun-types": "latest",
+    "pinyin-pro": "^3.29.2"
+  }
+}

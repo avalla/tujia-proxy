@@ -1,0 +1,961 @@
+{
+  "pictureList": [
+    "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062001059168_1050_701.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511081035439245_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511081035438953_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511082051546221_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511082051545297_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511082051541460_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062001061891_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062001074050_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062001529903_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511081845575158_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062002252873_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511081844181560_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062001219674_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251108/thumb/202511081844187515_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251110/thumb/202511101014225980_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251110/thumb/202511101014194729_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251110/thumb/202511101015539537_700_467.jpg",
+    "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062001075253_700_467.jpg"
+  ],
+  "longitude": 113.39737245751236,
+  "latitude": 23.142448944019133,
+  "finalPrice": 187,
+  "finalPriceUnit": "",
+  "finalPriceDesc": "",
+  "addPeopleAmount": 0,
+  "cleaningAmount": 0,
+  "cleaningTipsText": null,
+  "priceTags": null,
+  "topListTag": null,
+  "urgencyTip": null,
+  "refinedTags": [],
+  "finalPriceDisplayType": 1,
+  "priceTipBadge": {
+    "type": 0,
+    "id": 0,
+    "text": "7.1折,已享2项优惠",
+    "color": "#FFFFFF",
+    "background": null,
+    "border": null,
+    "orderIndex": 0,
+    "tip": null,
+    "jumpUrl": null,
+    "colorType": 0,
+    "gradient": {
+      "startColor": "#FF6666",
+      "endColor": "#FB4A4A"
+    }
+  },
+  "displayOrigionPrice": true,
+  "houseListTagImage": null,
+  "productId": 134702493,
+  "landlordLevelUrl": "",
+  "promoText": null,
+  "boardRank": 0,
+  "extendMap": {
+    "adPosition": "false",
+    "recallType": "4194560",
+    "logicBit": "0",
+    "logicBits": "[0,34393292800]",
+    "blacklist": "4",
+    "position": "1",
+    "priceRiseIndex": "0.020547857356107646"
+  },
+  "houseAdvert": null,
+  "celebrityInfos": [],
+  "preloadHouse": null,
+  "isBusinessTrivalServiceHouse": false,
+  "unitId": 85069948,
+  "unitName": "广州天河区/新装修/清新雅致复式/琶洲交易会/盛年华寓/奥体中心/清华附中/棠东地铁口",
+  "address": "盛年华寓",
+  "geoCoordSysType": "bd09ll",
+  "cityId": 45,
+  "cityName": "广州",
+  "districtName": "天河区",
+  "regionId": 45,
+  "fitSearchCondition": true,
+  "productPrice": 267,
+  "failType": 0,
+  "priceMissingText": null,
+  "failDesc": null,
+  "diamondLevel": 0,
+  "brandHotel": false,
+  "great": false,
+  "logoUrl": "https://pic.tujia.com/upload/landlordstorelogo/day_251106/thumb/202511062022574073_90_90.jpg",
+  "landlordHeadStyle": {
+    "head": "https://pic.tujia.com/upload/landlordstorelogo/day_251106/thumb/202511062022574073_90_90.jpg",
+    "headStart": "",
+    "headEnd": ""
+  },
+  "hotleId": 29987758,
+  "showHouseVR": false,
+  "showHouseItemIconUrl": "https://pic.tujia.com/upload/festatic/crn/toc7445_L_shipai_icon.png",
+  "showHouseItemIconType": 1,
+  "pictureCount": 18,
+  "defaultPicture": "https://pic.tujia.com/upload/landlordunit/day_251106/thumb/202511062001059168_700_467.jpg",
+  "adverUnit": false,
+  "advertUnitType": 0,
+  "expressBooking": false,
+  "unitSummeries": [
+    {
+      "text": "2居2大床4人",
+      "landmarkDesc": null,
+      "distance": null,
+      "anchorPoint": null,
+      "icon": null,
+      "bold": false,
+      "textType": "CANLIVEDESC",
+      "color": null,
+      "boldType": null,
+      "sceneType": null
+    },
+    {
+      "text": "整套28㎡",
+      "landmarkDesc": null,
+      "distance": null,
+      "anchorPoint": null,
+      "icon": null,
+      "bold": false,
+      "textType": "HOUSELEVEL",
+      "color": null,
+      "boldType": null,
+      "sceneType": null
+    },
+    {
+      "text": "",
+      "landmarkDesc": "距万胜围地铁站",
+      "distance": "直线4.3公里",
+      "anchorPoint": null,
+      "icon": null,
+      "bold": false,
+      "textType": "NAVIGATIONINFO",
+      "color": null,
+      "boldType": null,
+      "sceneType": 99
+    }
+  ],
+  "navigation": {
+    "latitude": 23.103954,
+    "longitude": 113.39167,
+    "name": "万胜围地铁站",
+    "title": "距万胜围地铁站直线4.3公里",
+    "info": "距万胜围地铁站直线4.3公里",
+    "sceneType": 99
+  },
+  "sourceChannel": 1,
+  "activityId": "0",
+  "atmosphereCornerIcon": "",
+  "promotionPicUrl": null,
+  "distance": 4319,
+  "checkOutDate": "2026-11-05",
+  "checkInDate": "2026-10-10",
+  "allActiveAndRedPacket": {
+    "isPromotionPicUrl": false,
+    "memberName": "钻石会员",
+    "backgroundColor": "#E5EEFB",
+    "fontColor": "#465290",
+    "memberType": 3,
+    "titleStyle": {
+      "titleImageUrl": "https://pic.tujia.com/upload/festatic/member/LD-toast-zuanshi.png",
+      "gradualChangeColorList": [
+        "rgba(244, 246, 249, 1)",
+        "rgba(207, 225, 255, 1)"
+      ]
+    },
+    "buttonStyle": {
+      "fontColor": "rgba(248, 228, 195, 1)",
+      "buttonGradualChangeColorList": [
+        "rgba(98, 107, 157, 1)",
+        "rgba(70, 82, 144, 1)"
+      ]
+    },
+    "promoTagMemberIcon": "https://pic.tujia.com/upload/festatic/app/toc_2037_diamond.png",
+    "activeRedPacket": [
+      {
+        "title": "钻石会员",
+        "introduction": "-￥26",
+        "focus": null,
+        "blod": false,
+        "icon": null,
+        "color": null,
+        "tip": "",
+        "highLight": null,
+        "memberTitle": "钻石会员",
+        "memberLevelStyle": {
+          "detailBannerUrl": "https://pic.tujia.com/upload/festatic/member/D-banner-zuanshi.png",
+          "detailBannerUrlForRank": "https://pic.tujia.com/upload/festatic/crn/diamond-with-rank.png",
+          "titleStyle": {
+            "titleImageUrl": "https://pic.tujia.com/upload/festatic/member/LD-toast-zuanshi.png",
+            "gradualChangeColorList": [
+              "rgba(244, 246, 249, 1)",
+              "rgba(207, 225, 255, 1)"
+            ]
+          },
+          "tagStyle": {
+            "tagBgColor": "#E5EEFB",
+            "tagTxtColor": "#465290",
+            "tagIcon": "https://pic.tujia.com/upload/festatic/app/toc_2037_diamond.png"
+          },
+          "memberType": 3,
+          "buttonStyle": {
+            "fontColor": "rgba(248, 228, 195, 1)",
+            "buttonGradualChangeColorList": [
+              "rgba(98, 107, 157, 1)",
+              "rgba(70, 82, 144, 1)"
+            ]
+          }
+        },
+        "maskTagText": "",
+        "titleType": 0,
+        "marketActivityId": 1000002,
+        "expanded": false,
+        "received": false,
+        "zeroCard": false,
+        "zeroActivity": false,
+        "discountFeeId": "",
+        "amount": 26,
+        "description": "",
+        "totalReduceAmount": 698
+      },
+      {
+        "title": "连住优惠",
+        "introduction": "-￥53",
+        "focus": null,
+        "blod": false,
+        "icon": null,
+        "color": null,
+        "tip": "",
+        "highLight": null,
+        "memberTitle": "连住优惠",
+        "memberLevelStyle": null,
+        "maskTagText": "",
+        "titleType": 0,
+        "marketActivityId": 1000015,
+        "expanded": false,
+        "received": false,
+        "zeroCard": false,
+        "zeroActivity": false,
+        "discountFeeId": "",
+        "amount": 53,
+        "description": "",
+        "totalReduceAmount": 1396
+      }
+    ],
+    "totalReduceAmount": 79,
+    "tagTitles": [
+      {
+        "text": "钻石会员"
+      },
+      {
+        "text": "连住优惠"
+      },
+      {
+        "text": "2项减79"
+      }
+    ],
+    "title": "钻石会员优惠说明",
+    "everyDayAmount": 187,
+    "readPacketTags": []
+  },
+  "priceTagVO": {
+    "totalReduceAmount": "已省¥80",
+    "lowPrideTotalReduceAmount": "80",
+    "activityTags": [
+      {
+        "text": "钻石会员",
+        "icon": "https://pic.tujia.com/upload/festatic/crn/pricetag_t_icon_zuanshi.png",
+        "activityId": 1000002
+      }
+    ],
+    "priceTagStyle": {
+      "backgroundColor": [
+        "#E5E8FF",
+        "#E5E8FF"
+      ],
+      "priceFontColor": "#62549B",
+      "fontColor": "#62549B",
+      "lineColor": "#B4B9D8"
+    }
+  },
+  "priceDetailVO": {
+    "titleVO": {
+      "title": "每间每晚明细",
+      "subTitle": "10月10日-11月5日 | 共26晚",
+      "memberTitleImg": "https://pic.tujia.com/upload/festatic/crn/pricedetail_t_membertitleimg_zuanshi.png",
+      "backgroundColor": [
+        "#E2E6FF",
+        "#FFFDFA"
+      ],
+      "subTitleFontColor": "#666666"
+    },
+    "footerBtn": {
+      "backgroundColor": [
+        "#6D4BCB",
+        "#361B8D"
+      ],
+      "fontColor": "#FFFFFF"
+    },
+    "originalPriceVO": {
+      "totalPrice": 6936,
+      "dailyPrice": 266.77,
+      "stayNight": 26,
+      "dailyPriceList": [
+        {
+          "date": "10月10日",
+          "price": 268
+        },
+        {
+          "date": "10月11日",
+          "price": 268
+        },
+        {
+          "date": "10月12日",
+          "price": 248
+        },
+        {
+          "date": "10月13日",
+          "price": 248
+        },
+        {
+          "date": "10月14日",
+          "price": 248
+        },
+        {
+          "date": "10月15日",
+          "price": 248
+        },
+        {
+          "date": "10月16日",
+          "price": 268
+        },
+        {
+          "date": "10月17日",
+          "price": 268
+        },
+        {
+          "date": "10月18日",
+          "price": 268
+        },
+        {
+          "date": "10月19日",
+          "price": 248
+        },
+        {
+          "date": "10月20日",
+          "price": 248
+        },
+        {
+          "date": "10月21日",
+          "price": 248
+        },
+        {
+          "date": "10月22日",
+          "price": 248
+        },
+        {
+          "date": "10月23日",
+          "price": 268
+        },
+        {
+          "date": "10月24日",
+          "price": 268
+        },
+        {
+          "date": "10月25日",
+          "price": 268
+        },
+        {
+          "date": "10月26日",
+          "price": 248
+        },
+        {
+          "date": "10月27日",
+          "price": 248
+        },
+        {
+          "date": "10月28日",
+          "price": 248
+        },
+        {
+          "date": "10月29日",
+          "price": 248
+        },
+        {
+          "date": "10月30日",
+          "price": 268
+        },
+        {
+          "date": "10月31日",
+          "price": 268
+        },
+        {
+          "date": "11月1日",
+          "price": 320
+        },
+        {
+          "date": "11月2日",
+          "price": 320
+        },
+        {
+          "date": "11月3日",
+          "price": 320
+        },
+        {
+          "date": "11月4日",
+          "price": 320
+        }
+      ]
+    },
+    "discountPriceVO": {
+      "finalDailyPriceOriginal": 186.23,
+      "finalTotalPriceOriginal": 4842,
+      "finalDailyPrice": "186.23≈187",
+      "finalTotalPrice": "4842",
+      "finalDailyPriceDisplayed": 187,
+      "tips": "*小数点向上取整展示",
+      "totalDiscountPrice": 2094,
+      "dailyDiscountPrice": 80
+    },
+    "discountList": [
+      {
+        "title": "钻石会员",
+        "desc": "钻石会员专享",
+        "discountPrice": 698,
+        "activityId": 1000002
+      },
+      {
+        "title": "连住优惠",
+        "desc": "连住多晚，活动房型可享该优惠",
+        "discountPrice": 1396,
+        "activityId": 1000015
+      }
+    ]
+  },
+  "activityInfo": "%7B%22peopleCount%22%3A1%2C%22bookingCount%22%3A1%2C%22extraAttribute%22%3A%220_0_0__4842_0_0_0__null_1000002___1000015%2C-888__%22%2C%22version%22%3A1%2C%22source%22%3A2%2C%22totalHouseAmount%22%3A0%2C%22totalAddPeopleAmount%22%3A0%2C%22totalCleaningAmount%22%3A0%2C%22maxPeopleCount%22%3A1%2C%22addPeopleAmount%22%3A0%2C%22qdepositFlag%22%3Afalse%2C%22sproductId%22%3A%22134702493_null_1000002_1000015%2C-888%22%2C%22checkOutDate%22%3A%222026-11-05%22%2C%22checkInDate%22%3A%222026-10-10%22%2C%22geoPointId%22%3A268263%2C%22advertChargingType%22%3Anull%2C%22productPrice%22%3A267%2C%22finalPrice%22%3A187%2C%22referTraceId%22%3A%221786867778000cdAPzP1y_RRW27ih0WwAKjzNd2iPTXAzcMG0e%22%2C%22sourceChannel%22%3A1%2C%22prevTraceId%22%3A%22t-api-gateway-c-p1_2608161609.10.95.158.243.2514.645091562_1%22%2C%22lowerPriceHouseId%22%3A0%2C%22currentTime%22%3A1786867779929%7D",
+  "favoriteCount": "335",
+  "commentBriefForCD": {
+    "overall": 4.9,
+    "scoreTitle": "超赞",
+    "commentBrief": "“服务态度很好”",
+    "commentBriefV2": "“服务态度很好”",
+    "userAvatars": null,
+    "userAvatar": "",
+    "totalCount": 16,
+    "veryGoodNewHouse": "",
+    "veryGoodNewHouseIcon": "",
+    "healthText": "",
+    "healthFlag": -1,
+    "sort": "",
+    "veryGoodNewHouseFlag": false,
+    "scoreTitleV2": "超棒"
+  },
+  "commentBrief": {
+    "overall": 4.9,
+    "scoreTitle": "超赞",
+    "commentBrief": "“服务态度很好”",
+    "commentBriefV2": "“服务态度很好”",
+    "userAvatars": null,
+    "userAvatar": "",
+    "totalCount": 16,
+    "veryGoodNewHouse": "",
+    "veryGoodNewHouseIcon": "",
+    "healthText": "",
+    "healthFlag": -1,
+    "sort": "",
+    "scoreTitleV2": "超棒"
+  },
+  "isCommentNewStyle": true,
+  "isPremiumFeatureHouse": false,
+  "rankInfo": {
+    "noIcon": "https://pic.tujia.com/upload/festatic/2401/dffd972615125c2f.png",
+    "textColor": "#5C381C",
+    "name": "",
+    "rank": 0,
+    "url": "",
+    "rankId": 0
+  },
+  "houseTags": [
+    {
+      "type": 0,
+      "id": 0,
+      "text": "连住优惠减53",
+      "color": "#FF6666",
+      "background": {
+        "color": "rgba(255,102,102,0.10)",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": null,
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 4
+    },
+    {
+      "type": 0,
+      "id": 0,
+      "text": "钻石会员减26",
+      "color": "#FF6666",
+      "background": {
+        "color": "rgba(255,102,102,0.10)",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": null,
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 4
+    },
+    {
+      "type": 0,
+      "id": 1000244,
+      "text": "实拍看房",
+      "color": "#17D2BC",
+      "background": {
+        "color": "#E7FAF8",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2
+    },
+    {
+      "type": 0,
+      "id": 1000427,
+      "text": "免费瓶装水",
+      "color": "#17D2BC",
+      "background": {
+        "color": "#E7FAF8",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2
+    },
+    {
+      "type": 0,
+      "id": 1000676,
+      "text": "近2年装修",
+      "color": "#17D2BC",
+      "background": {
+        "color": "#E7FAF8",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2
+    }
+  ],
+  "houseTagsForCD": [
+    {
+      "type": 1,
+      "id": 300002,
+      "text": "免费取消",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 1
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 0,
+      "typeTitle": "权益",
+      "tagDesc": "10月7日18点前可享"
+    },
+    {
+      "type": 5,
+      "id": 100604,
+      "text": "近地铁",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 1000244,
+      "text": "实拍看房",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 1000427,
+      "text": "免费瓶装水",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 1000676,
+      "text": "近2年装修",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 100406,
+      "text": "观景露台",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 1000156,
+      "text": "地标建筑",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": 1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 100413,
+      "text": "有洗衣机",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 100412,
+      "text": "全天热水",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 100408,
+      "text": "付费停车位",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 1000149,
+      "text": "充电桩",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": 1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 5,
+      "id": 1000421,
+      "text": "吹风机",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 2,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 4,
+      "id": 100416,
+      "text": "智能门锁",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 1,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 4,
+      "id": 1000198,
+      "text": "冷暖空调",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 1,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 4,
+      "id": 100409,
+      "text": "电梯",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 1,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    },
+    {
+      "type": 4,
+      "id": 1000113,
+      "text": "冰箱",
+      "color": "#666666",
+      "background": {
+        "color": "#FFFFFF",
+        "image": null,
+        "gradientColor": null
+      },
+      "border": {
+        "color": "#E0E0E0",
+        "width": 0
+      },
+      "orderIndex": 0,
+      "tip": null,
+      "jumpUrl": null,
+      "colorType": 1,
+      "showStatus": -1,
+      "typeTitle": "亮点"
+    }
+  ],
+  "promoContent": null,
+  "picTopIcon": null,
+  "businessStrategyExtendConfig": {
+    "isBusinessStrategyExtendHouse": true,
+    "textColor": "#324D84",
+    "commentBriefList": [
+      {
+        "type": 1,
+        "commentBrief": "服务态度很好"
+      },
+      {
+        "type": 1,
+        "commentBrief": "洗漱用品也很好用"
+      },
+      {
+        "type": 1,
+        "commentBrief": "出行方便"
+      },
+      {
+        "type": 1,
+        "commentBrief": "✨很好的环境"
+      },
+      {
+        "type": 1,
+        "commentBrief": "总体的性价比还是很高的👍"
+      }
+    ]
+  },
+  "l2dParameters": {
+    "directSearchResult": {},
+    "navigation": {
+      "latitude": 23.103954,
+      "longitude": 113.39167,
+      "name": "万胜围地铁站",
+      "title": "距万胜围地铁站直线4.3公里",
+      "info": "距万胜围地铁站直线4.3公里",
+      "sceneType": 99
+    },
+    "searchId": "_1786867778950_330",
+    "traceId": "t-api-gateway-c-p1_2608161609.10.95.158.243.2514.645091562_1",
+    "rankTraceId": "20260816160938963_55c414",
+    "commentBrief": "“服务态度很好”",
+    "houseCityTerritoryType": 1,
+    "hasShootingVideos": true
+  },
+  "retrievalId": "85069948",
+  "isZhenxuanHouse": false,
+  "isEmptySearch": false
+}

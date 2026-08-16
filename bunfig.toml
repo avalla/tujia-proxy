@@ -1,0 +1,7 @@
+[install]
+# Usa il registry npm standard
+registry = "https://registry.npmjs.org"
+
+[run]
+# Bun esegue TS nativamente, nessun ts-node necessario
+# Hot reload automatico con --watch

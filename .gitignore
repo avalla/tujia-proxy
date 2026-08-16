@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.env
+*.log
+bun.lockb
+.DS_Store
+storage/
+output/
+.idea/
+
+# Live Tujia session — never commit. Start from cookies.example.txt.
+cookies.txt
+
+# Sniffed reference requests: these carry a real logged-in session inline.
+requests.http
+test-*.sh
+
+# Captured API responses; these contain session ids and user data.
+temp.json
+response.json

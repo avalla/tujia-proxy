@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tujia EN — Guangzhou stays</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">途</span>
+      <div>
+        <h1>Tujia <span class="accent">EN</span></h1>
+        <p class="tagline">Chinese apartment rentals, in English</p>
+      </div>
+    </div>
+    <div class="fair-badge" title="Distances are measured to the Canton Fair Complex">
+      <span class="dot"></span> Canton Fair reference
+    </div>
+  </div>
+</header>
+
+<main class="wrap layout">
+
+  <!-- ── Search panel ─────────────────────────────────────────────── -->
+  <aside class="panel">
+    <form id="search-form">
+
+      <section class="field-group">
+        <h2>Dates</h2>
+        <div class="row">
+          <label class="field">
+            <span>Check in</span>
+            <input type="date" id="checkIn" value="2026-10-10" required>
+          </label>
+          <label class="field">
+            <span>Check out</span>
+            <input type="date" id="checkOut" value="2026-11-05" required>
+          </label>
+        </div>
+        <p class="nights" id="nights"></p>
+      </section>
+
+      <section class="field-group">
+        <h2>Guests &amp; price</h2>
+        <label class="field">
+          <span>Guests</span>
+          <select id="guestCount"></select>
+        </label>
+        <div class="row">
+          <label class="field">
+            <span>Min ¥ / night</span>
+            <input type="number" id="priceMin" value="0" min="0" step="10">
+          </label>
+          <label class="field">
+            <span>Max ¥ / night</span>
+            <input type="number" id="priceMax" value="300" min="0" step="10">
+          </label>
+        </div>
+        <p class="hint" id="price-hint"></p>
+      </section>
+
+      <section class="field-group">
+        <h2>Location</h2>
+        <label class="field">
+          <span>Near metro line</span>
+          <select id="metroLine">
+            <option value="">Any line</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Near metro station</span>
+          <input type="search" id="station-filter" placeholder="Type to filter 400+ stations…" autocomplete="off">
+          <select id="metroStation" size="1">
+            <option value="">Anywhere in Guangzhou</option>
+          </select>
+        </label>
+        <p class="hint" id="location-hint"></p>
+        <label class="field">
+          <span>Max distance to Canton Fair</span>
+          <select id="maxFair">
+            <option value="">No limit</option>
+            <option value="2">Within 2 km</option>
+            <option value="4">Within 4 km</option>
+            <option value="6">Within 6 km</option>
+            <option value="10">Within 10 km</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="field-group">
+        <h2>Sort</h2>
+        <label class="field">
+          <span class="sr-only">Sort order</span>
+          <select id="sort"></select>
+        </label>
+      </section>
+
+      <section class="field-group">
+        <h2>Filters</h2>
+        <div id="amenity-groups" class="amenities"></div>
+      </section>
+
+      <button type="submit" class="search-btn" id="search-btn">Search</button>
+      <p class="catalog-note" id="catalog-note"></p>
+    </form>
+  </aside>
+
+  <!-- ── Results ──────────────────────────────────────────────────── -->
+  <section class="results">
+    <div id="summary" class="summary" hidden></div>
+    <div id="status" class="status">
+      <div class="status-inner">
+        <h2>Ready when you are</h2>
+        <p>Pick your dates and filters, then hit Search.</p>
+      </div>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="results-end"></div>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <p>
+    Unofficial English proxy for <a href="https://m.tujia.com" rel="noreferrer noopener" target="_blank">m.tujia.com</a>.
+    Prices convert at a fixed rate and are indicative; booking happens on Tujia in Chinese.
+  </p>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

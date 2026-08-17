@@ -1,27 +1,64 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
+import { TujiaClient } from '../services/tujiaClient';
+import { mapDetailToEnglish } from '../services/detailMapper';
+import { getCache, setCache } from '../middleware/cache';
+import { CONFIG } from '../config';
 
 const router = Router();
+const client = new TujiaClient();
 
 /**
- * Not implemented.
+ * Full listing detail, translated.
  *
- * The path this route used to call — /bnbapp-node-h5/h5/unit/detail — was never a
- * real Tujia endpoint; it 404s with a Ctrip-style ResponseStatus envelope. The real
- * detail request has not been sniffed yet.
- *
- * To implement: open a listing on m.tujia.com with DevTools recording, copy the
- * detail XHR into requests.http, then wire it up here the way search() is wired.
- *
- * In the meantime the search endpoint already returns per-unit images, amenities,
- * occupancy, coordinates and pricing, which covers most of what a detail view needs.
+ * Dates are optional but meaningful: Tujia computes the price and the cancellation
+ * timeline for the requested stay, so passing them keeps the page consistent with
+ * whatever the search showed.
  */
-router.get('/:id', (req, res) => {
-  res.status(501).json({
-    error: 'Not implemented',
-    message: 'The Tujia unit-detail endpoint has not been reverse-engineered yet.',
-    unitId: req.params.id,
-    bookUrl: `https://m.tujia.com/detail/${req.params.id}.htm`,
-  });
+router.get('/:id', async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  if (!/^\d+$/.test(id)) {
+    res.status(400).json({ error: 'Invalid listing id', message: 'Expected a numeric unit id.' });
+    return;
+  }
+
+  const checkIn = typeof req.query.checkIn === 'string' ? req.query.checkIn : '';
+  const checkOut = typeof req.query.checkOut === 'string' ? req.query.checkOut : '';
+  const guests = Number(req.query.guests) || 1;
+
+  const cacheKey = `detail:${id}:${checkIn}:${checkOut}:${guests}`;
+  const cached = getCache(cacheKey);
+  if (cached) {
+    res.json({ ...cached, cached: true });
+    return;
+  }
+
+  try {
+    const raw = await client.detail(id, { checkIn, checkOut, guests });
+    if (!raw?.data?.houseId && !raw?.data?.currentHouse) {
+      res.status(404).json({ error: 'Listing not found', message: `No detail for unit ${id}.` });
+      return;
+    }
+
+    const hotel = mapDetailToEnglish(raw, id);
+    setCache(cacheKey, hotel);
+    res.json({ ...hotel, cached: false });
+  } catch (err: any) {
+    const status = err.status || 502;
+    const missingSession = err.name === 'MissingCookiesError';
+    console.error('Detail error:', err.response?.data || err.message);
+    res.status(status).json({
+      error: missingSession
+        ? 'No Tujia session'
+        : status === 401
+          ? 'Tujia session expired'
+          : 'Tujia API error',
+      message: err.message,
+      ...(status === 401 &&
+        !missingSession && {
+          hint: `Refresh the cookies in ${CONFIG.COOKIES_FILE} — the saved session has expired.`,
+        }),
+    });
+  }
 });
 
 export default router;

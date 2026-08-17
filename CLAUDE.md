@@ -46,6 +46,23 @@ If the generator reports filters falling back to pinyin, add them to `AMENITY_MA
 
 `TujiaClient.buildConditions()` resolves amenity values through this catalog, so the search API accepts any of the 104 filter ids; the `acceptForeigners` / `nearMetro` / `freeParking` booleans are just aliases folded into `amenities`.
 
+## The detail page
+
+`services/detailMapper.ts` is a **separate mapper** from `mapper.ts` — the detail shape shares almost no field names with a search item. Four traps, all found by testing rather than reading:
+
+- **`deleted: true` on a facility means the place does NOT have it.** Listing those as amenities advertises what is missing. They are split into `amenitiesUnavailable` and struck through in the UI.
+- **`isDeleted: true` on a check-in rule means NOT permitted** (no pets, no cooking). Same inversion, different key name.
+- **`orderTotalStayNight` is not a number.** It is a bucket phrase (`小住几晚` = "a few nights"), hence `stayLength: string`.
+- **`discount: "7.0"` is a 折 figure** — you pay 70%, so it renders as "30% off", not "7.0".
+
+Neither name Tujia ships is English: `currentHouse.houseName` is a short Chinese title and `topModule.houseName` is the search keyword string. The page synthesises an English headline from structured facts, exactly as the result cards do, and keeps both Chinese forms visible.
+
+**Reviews stay Chinese.** `commentDetailTranslation` / `commentDetailHasTranslation` exist on every review and Tujia never populates them, and no translation endpoint appears in the traffic. The page says so rather than pretending. The English signal comes from the structured parts — rating, six sub-scores, review tags.
+
+Free-text policies (cancellation timeline, deposit terms) go through `translatePolicyText()`, a phrase table. **Order matters there**: longer phrases must precede the anchors they contain, or `离店` fires inside `离店后原路退还` and wrecks it. Anything still containing CJK afterwards is flagged `partial: true`, and the UI shows the Chinese original alongside.
+
+To check coverage after changing the vocabulary, walk the payload of several listings and flag CJK in fields that should be English — that is how the remaining gaps (layout chips, rating words, `¥50/人/晚` vs `¥50/人晚`) were found.
+
 ## Whole-line filter ("near line X")
 
 Each line subgroup in the taxonomy carries a `全线` pseudo-entry whose value is a **`7_*`** condition (stations are `1_*`). It filters the entire line server-side — verified against an unfiltered control, measuring distance to Line 8 with our own geo:
@@ -107,7 +124,15 @@ Both are POSTs that take the **same** `conditions` array, and they answer comple
 | `/bnbapp-node-h5/h5/search/v2/searchhouse/bnb` | **Listings**, in `data.items` | Also `data.totalCount` (all matches) and `data.canBookCount` (bookable for those dates). Needs `feLog`, and user-chosen conditions marked `"selected": true`. `TujiaClient.search()` |
 | `/bnbapp-node-h5/h5/search/conditions/fetch` | **Filter taxonomy only**, in `data.allConditions` | No listings at all. ~880 leaf items in a group/subGroup tree, contextualized to the conditions you send. `TujiaClient.fetchConditions()`, consumed by the catalog generator |
 
-`GET /bnbapp-node-h5/h5/unit/detail` **does not exist** — it 404s with a Ctrip-style `ResponseStatus` envelope. `routes/detail.ts` returns 501 until someone sniffs the real detail request into `requests.http`.
+A third endpoint serves one listing:
+
+| Endpoint | Returns |
+|---|---|
+| `POST /bnbapp-node-h5/h5/house/gethouse/v3/bnb` | **Full detail**, in `data.mainPart` / `data.currentHouse` / `data.pricePart` (~75 KB) |
+
+Sniffed by loading `m.tujia.com/detail/<id>.htm` in Playwright with a real session and watching the XHR. Its payload is a plain `{houseParameter, productParameter, searchId, extendParameter, feLog}` — dates matter, since prices and the cancellation timeline are computed for the stay.
+
+`GET /bnbapp-node-h5/h5/unit/detail` **does not exist** — it 404s with a Ctrip-style `ResponseStatus` envelope. It was a guess in the original code; don't reinstate it.
 
 Tujia mirrors the active filter set into the page URL as `<type>-<value>` pairs, and reads the `Referer`:
 `/hotel_city45_5-1_268263/6-237_6-2301_6-502_7-0,300/` — city+metro in the first segment, the rest underscore-joined. `TujiaClient.buildReferer()` reconstructs this rather than hardcoding it.

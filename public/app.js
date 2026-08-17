@@ -559,6 +559,15 @@ function nearestOnFilteredLine(h) {
   };
 }
 
+/** Link to our translated detail page, carrying the stay so prices stay consistent. */
+function detailHref(h) {
+  const q = new URLSearchParams({ id: h.id });
+  if (paging.body?.checkIn) q.set('checkIn', paging.body.checkIn);
+  if (paging.body?.checkOut) q.set('checkOut', paging.body.checkOut);
+  if (paging.body?.guestCount) q.set('guests', String(paging.body.guestCount));
+  return `/listing.html?${q}`;
+}
+
 function card(h) {
   const el = document.createElement('article');
   el.className = 'card';
@@ -649,7 +658,7 @@ function card(h) {
           </div>
           <span class="cny">¥${h.price.perNightCNY} CNY</span>
         </div>
-        <a class="book" href="${esc(h.bookUrl)}" target="_blank" rel="noreferrer noopener">Book ↗</a>
+        <a class="book" href="${esc(detailHref(h))}">Details →</a>
       </div>
     </div>`;
   return el;

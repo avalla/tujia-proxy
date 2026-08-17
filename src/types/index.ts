@@ -115,6 +115,106 @@ export interface HotelEn {
   promotions: string[];
 }
 
+export interface NamedItem {
+  en: string;
+  cn: string;
+}
+
+/** Full listing detail, from `house/gethouse/v3/bnb`. Distinct shape from HotelEn. */
+export interface HotelDetailEn {
+  id: string;
+  /** Synthesised English headline — Tujia ships no English title of any kind. */
+  name: string;
+  /** Tujia's short Chinese title, e.g. 清新二室一厅套房. */
+  nameCn: string;
+  /** The long keyword string used in search results. */
+  nameOriginal: string;
+  summary: string;
+  layoutRaw: string;
+  layout: {
+    type: string;
+    entirePlace: boolean;
+    areaSqm: number | null;
+    bedrooms: number | null;
+    highlights: string[];
+  };
+  price: {
+    perNightCNY: number;
+    perNightEUR: number;
+    originalCNY: number | null;
+    originalEUR: number | null;
+    discountLabel: string | null;
+    minNights: number | null;
+    bookable: boolean;
+  };
+  rating: number | null;
+  ratingLabel: string | null;
+  reviewCount: number;
+  subScores: { name: string; score: number }[];
+  reviewTags: { label: string; count: number }[];
+  reviews: {
+    id: string;
+    author: string;
+    score: number | null;
+    date: string;
+    text: string;
+    textOriginal: string;
+    translatedByTujia: boolean;
+    /** A bucket phrase ("a few nights"), not a number — Tujia does not expose the count. */
+    stayLength: string | null;
+  }[];
+  location: {
+    address: string;
+    district: string;
+    districtEn: string;
+    city: string;
+    area: string;
+    lng: number | null;
+    lat: number | null;
+    distanceToCantonFairKm: number | null;
+    nearestMetro: NearestMetroEn | null;
+    mapImageUrl: string | null;
+  };
+  host: {
+    name: string;
+    logo: string | null;
+    level: number | null;
+    repliesWithin5Min: boolean;
+    tags: string[];
+    stats: { label: string; value: string }[];
+  };
+  images: string[];
+  amenities: { group: string; groupCn: string; items: NamedItem[] }[];
+  /** Facilities Tujia explicitly marks as absent — shown so the list is honest. */
+  amenitiesUnavailable: NamedItem[];
+  tags: string[];
+  rules: {
+    checkIn: {
+      label: string;
+      labelCn: string;
+      allowed: boolean;
+      note: string | null;
+      noteCn: string | null;
+    }[];
+    /** `partial` means some Chinese survived the phrase table — show the original too. */
+    cancellation: {
+      when: string;
+      whenCn: string;
+      note: string | null;
+      noteCn: string | null;
+      partial: boolean;
+    }[];
+    costs: {
+      label: string;
+      labelCn: string;
+      detail: string;
+      detailCn: string;
+      partial: boolean;
+    }[];
+  };
+  bookUrl: string;
+}
+
 export interface SearchResponse {
   query: SearchRequest;
   results: HotelEn[];

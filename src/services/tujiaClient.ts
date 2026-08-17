@@ -17,11 +17,14 @@ const LINE_BY_VALUE = new Map(
 /** Opaque page ids the H5 app sends. They are not validated, but are echoed into feLog. */
 const PID_SEARCH = 'RRW27ih0WwAKjzNd2iPTXAzcMG0e';
 const PID_LIST = 'AHr1pThCXTp5f4nHT0fABYp5p7NY';
+const PID_DETAIL = 'csH6SPEGdxaTey66A3sn6Sty9AJb';
 
 /** Listings. Returns `data.items`. */
 const PATH_SEARCH = '/bnbapp-node-h5/h5/search/v2/searchhouse/bnb';
 /** Filter taxonomy only — no listings. Returns `data.allConditions`. */
 const PATH_CONDITIONS = '/bnbapp-node-h5/h5/search/conditions/fetch';
+/** Full listing detail. Returns `data.mainPart` / `data.currentHouse` / `data.pricePart`. */
+const PATH_DETAIL = '/bnbapp-node-h5/h5/house/gethouse/v3/bnb';
 
 interface Condition {
   label: string;
@@ -298,5 +301,55 @@ export class TujiaClient {
       this.buildReferer(params, this.buildConditions(params)),
       { checkIn: params.checkIn, checkOut: params.checkOut }
     );
+  }
+
+  /**
+   * Full detail for one listing.
+   *
+   * Sniffed from m.tujia.com/detail/<id>.htm — the endpoint is `house/gethouse/v3/bnb`,
+   * NOT the `unit/detail` path this repo used to guess at (which 404s).
+   * Dates matter: prices and the cancellation timeline are computed for the stay.
+   */
+  async detail(
+    unitId: string,
+    opts: { checkIn?: string; checkOut?: string; guests?: number } = {}
+  ): Promise<any> {
+    const checkIn = opts.checkIn || '';
+    const checkOut = opts.checkOut || '';
+    const payload = {
+      houseParameter: {
+        houseId: Number(unitId),
+        houseGuid: '',
+        graft: false,
+        preview: false,
+        landlordInviteScene: '',
+      },
+      productParameter: {
+        activityInfo: '',
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        needPrice: true,
+        productId: '',
+        bookingCount: 1,
+        peopleCount: opts.guests ?? 1,
+      },
+      searchId: '',
+      extendParameter: { l2dParameters: {} },
+      feLog: {
+        h5_base_log: JSON.stringify({
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          pname: 'unitDetail',
+          refpname: 'noPage',
+          pid: PID_DETAIL,
+          refPid: 'null',
+        }),
+      },
+    };
+
+    return this.post(PATH_DETAIL, PID_DETAIL, '', payload, `https://m.tujia.com/detail/${unitId}.htm`, {
+      checkIn,
+      checkOut,
+    });
   }
 }

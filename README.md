@@ -28,6 +28,9 @@ whether a session was loaded.
 - **406 metro stations across 21 lines**, searchable in English (Pazhou, Wanshengwei, Tiyuxilu…)
 - **104 filters** translated — accepts foreign guests, near metro, free parking, kitchen,
   instant confirmation, rating floors, and the rest of Tujia's taxonomy
+- **Translated detail pages** — photos, amenities grouped by room (and an honest list of
+  what the place *lacks*), house rules, the cancellation timeline with dates converted,
+  deposit terms, host stats and review sub-scores
 - **Filter by a whole metro line** ("everything along Line 8"), not just a single station —
   using Tujia's own line filter, so it paginates properly. Branches are listed separately
   (`Line 3 · Tiyuxilu ↔ Jichangbei`) because they really are different corridors
@@ -47,7 +50,8 @@ whether a session was loaded.
 | `GET`  | `/api/v1/cities` | supported cities |
 | `GET`  | `/api/v1/filters` | the English filter catalog that drives the UI |
 | `POST` | `/api/v1/search` | search listings |
-| `GET`  | `/api/v1/hotel/:id` | **501** — Tujia's detail endpoint has not been reverse-engineered yet |
+| `GET`  | `/api/v1/hotel/:id` | full listing detail, translated (`?checkIn=&checkOut=&guests=`) |
+| `GET`  | `/listing.html?id=` | the translated detail page |
 
 ### Search example
 
@@ -123,9 +127,12 @@ and the reverse-engineering notes.
 
 ## Caveats
 
-- Listing **titles stay Chinese** — Tujia's `unitName` is keyword-spam and the API exposes
-  no English title. The UI synthesises a headline from the structured facts
-  (`"Entire apartment · 67 m² in Liwan"`) and shows the original underneath.
+- **Tujia exposes no English title anywhere**, on either endpoint. The UI synthesises a
+  headline from the structured facts (`"Entire apartment · 67 m² in Liwan"`) and shows the
+  Chinese original underneath.
+- **Review text stays Chinese.** Tujia ships `commentDetailTranslation` fields but never
+  fills them, and there is no translation endpoint. Ratings, sub-scores and review tags
+  are translated; the comment bodies are shown as written, and labelled as such.
 - CNY→EUR uses a **fixed rate** (`CONFIG.CNY_TO_EUR`), so prices are indicative.
 - Booking still happens on Tujia, in Chinese. The **Book ↗** link opens the listing there.
 - Only Guangzhou (city `45`) is exercised. Other city ids are exposed but untested, and the

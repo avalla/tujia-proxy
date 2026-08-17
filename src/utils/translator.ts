@@ -131,6 +131,97 @@ const AMENITY_MAP: Record<string, string> = {
   '环境安静': 'Quiet surroundings',
   '性价比高': 'Great value',
   '隔音好': 'Good soundproofing',
+  // ── detail-page facility vocabulary ────────────────────────────────────
+  // Richer than the search filters; harvested from real gethouse/v3 responses.
+  '暖气': 'Heating',
+  '电热水壶': 'Electric kettle',
+  '沙发': 'Sofa',
+  '电吹风': 'Hair dryer',
+  '牙具': 'Toothbrush kit',
+  '浴巾': 'Bath towels',
+  '毛巾': 'Towels',
+  '电磁炉': 'Induction hob',
+  '燃气灶': 'Gas hob',
+  '晾衣架': 'Drying rack',
+  '洗浴用品': 'Toiletries',
+  '洗涤用品': 'Detergent',
+  '餐具': 'Tableware',
+  '餐桌': 'Dining table',
+  '刀具菜板': 'Knives & chopping board',
+  '烹饪锅具': 'Cookware',
+  '电饭煲': 'Rice cooker',
+  '烤箱': 'Oven',
+  '净水机': 'Water purifier',
+  '饮水机': 'Water dispenser',
+  '加湿器': 'Humidifier',
+  '电熨斗': 'Iron',
+  '音响': 'Sound system',
+  '投影设备': 'Projector',
+  '巨幕投影': 'Big-screen projector',
+  '窗户': 'Window',
+  '观景落地窗': 'Panoramic windows',
+  '江景': 'River view',
+  '一次性拖鞋': 'Disposable slippers',
+  '烧烤器具': 'BBQ equipment',
+  '健身房': 'Gym',
+  '跑步机': 'Treadmill',
+  '儿童乐园': "Children's play area",
+  '儿童玩具': "Children's toys",
+  '读书品茶': 'Reading & tea corner',
+  '管家式服务': 'Butler service',
+  '付费接机/站': 'Paid airport/station pickup',
+  '提供早餐': 'Breakfast available',
+  '低楼层无电梯': 'Low floor, no elevator',
+  // safety
+  '火灾警报器': 'Smoke alarm',
+  '灭火器': 'Fire extinguisher',
+  '急救包': 'First-aid kit',
+  '保安': 'Security staff',
+  '门禁卡': 'Key-card access',
+  '可视对讲': 'Video intercom',
+  // air conditioning is reported per room
+  '空调-冷暖': 'A/C (heating & cooling)',
+  '卧室-空调': 'Bedroom A/C',
+  '卧室-冷暖空调': 'Bedroom A/C (heating & cooling)',
+  '卧室-制冷空调': 'Bedroom A/C (cooling)',
+  '部分卧室-冷暖空调': 'Some bedrooms A/C (heating & cooling)',
+  '部分卧室-制冷空调': 'Some bedrooms A/C (cooling)',
+  '客厅-冷暖空调': 'Living-room A/C (heating & cooling)',
+  // "nearby" entries in the neighbourhood group
+  '超市': 'Supermarket nearby',
+  '便利店': 'Convenience store nearby',
+  '菜市场': 'Food market nearby',
+  '餐厅': 'Restaurant nearby',
+  '药店': 'Pharmacy nearby',
+  '公园': 'Park nearby',
+  '提款机': 'ATM nearby',
+  // ── review tags (commentTagVo) ─────────────────────────────────────────
+  '干净卫生': 'Clean',
+  '环境好': 'Nice surroundings',
+  '出行方便': 'Easy to get around',
+  '下次还想入住': 'Would stay again',
+  '设施挺好': 'Good facilities',
+  '设施新': 'New facilities',
+  '附近有地铁站': 'Metro station nearby',
+  '服务态度好': 'Good service',
+  '服务不错': 'Good service',
+  '床上用品不错': 'Good bedding',
+  '老板不错': 'Nice host',
+  '老板热情': 'Welcoming host',
+  '房间宽敞': 'Spacious room',
+  '房间挺好': 'Nice room',
+  '房间采光好': 'Bright room',
+  '位置不错': 'Good location',
+  '安静': 'Quiet',
+  '有停车位': 'Parking available',
+  '感觉很好': 'Felt great',
+  // ── host tags (landlordModule) ─────────────────────────────────────────
+  '自然人房东': 'Individual host',
+  '实名验证': 'ID verified',
+  // ── rules / costs ──────────────────────────────────────────────────────
+  '商业拍摄': 'Commercial photography',
+  '加人': 'Extra guests',
+  '其他': 'Other',
   // deals (优惠)
   '钻石会员价': 'Diamond member price',
   '房东直降': 'Host discount',
@@ -153,6 +244,8 @@ const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^(\d+)床$/, (m) => `${m[1]} bed${m[1] === '1' ? '' : 's'}`],
   [/^连住优惠减(\d+)$/, (m) => `¥${m[1]} off multi-night stays`],
   [/^钻石会员减(\d+)$/, (m) => `¥${m[1]} diamond member discount`],
+  // host tag: 5套房屋 → "5 listings"
+  [/^(\d+)套房屋$/, (m) => `${m[1]} listing${m[1] === '1' ? '' : 's'}`],
 ];
 
 const PROPERTY_TYPE_MAP: Record<string, string> = {
@@ -184,6 +277,230 @@ export function translateAmenity(cn: string): string {
   }
   return cn;
 }
+
+/** Facility group headings on the detail page (facilityModule → groupName). */
+const FACILITY_GROUP_MAP: Record<string, string> = {
+  服务: 'Services',
+  设施: 'Facilities',
+  厨房: 'Kitchen',
+  卫浴: 'Bathroom',
+  卧室: 'Bedroom',
+  客厅: 'Living room',
+  媒体娱乐: 'Media & entertainment',
+  室外: 'Outdoor',
+  安全: 'Safety',
+  家电: 'Appliances',
+  基础设施: 'Essentials',
+  周边: 'Neighbourhood',
+  儿童设施: 'Children',
+  儿童: 'Children',
+  基础: 'Essentials',
+  休闲: 'Leisure',
+  娱乐: 'Entertainment',
+  其他: 'Other',
+};
+
+/** Review sub-score names (commentModule → subScores, "如实描述 4.9"). */
+const SCORE_MAP: Record<string, string> = {
+  如实描述: 'Accuracy',
+  服务周到: 'Service',
+  位置便利: 'Location',
+  性价比: 'Value',
+  卫生清洁: 'Cleanliness',
+  设施设备: 'Facilities',
+  舒适度: 'Comfort',
+  安全度: 'Safety',
+  高性价比: 'Value for money',
+  入住便捷: 'Easy check-in',
+  干净卫生: 'Cleanliness',
+};
+
+/** Check-in rule items (rulesModule → checkInRules[].items[].introduction). */
+const RULE_MAP: Record<string, string> = {
+  接待婴儿: 'Infants welcome',
+  接待儿童: 'Children welcome',
+  接待老人: 'Elderly guests welcome',
+  接待海外: 'Overseas guests welcome',
+  接待港澳台: 'HK/Macau/Taiwan guests welcome',
+  带宠物: 'Pets',
+  吸烟: 'Smoking',
+  做饭: 'Cooking',
+  聚会: 'Parties',
+  入住须知: 'House rules',
+  退改政策: 'Cancellation policy',
+  费用须知: 'Fees & deposit',
+  押金: 'Deposit',
+  清洁费: 'Cleaning fee',
+  加人费: 'Extra guest fee',
+  其他费用: 'Other fees',
+};
+
+/** Landlord stat labels (landlordModule → hotelSummary[].title). */
+const HOST_STAT_MAP: Record<string, string> = {
+  好评率: 'Positive reviews',
+  订单确认率: 'Booking confirmation rate',
+  平均回复时间: 'Average reply time',
+  房源数: 'Listings',
+  入住率: 'Occupancy',
+};
+
+export const translateFacilityGroup = (cn: string): string => FACILITY_GROUP_MAP[cn] || cn;
+export const translateHostStat = (cn: string): string => HOST_STAT_MAP[cn] || cn;
+
+/** Rule/score labels fall back to the shared amenity vocabulary before giving up. */
+export const translateRule = (cn: string): string => RULE_MAP[cn] || translateAmenity(cn);
+export const translateScoreName = (cn: string): string => SCORE_MAP[cn] || translateAmenity(cn);
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * Cancellation timelines and fee notes are free text built from templates, with
+ * Chinese dates inline (`入住前3天（10月07日 18:00）`). Translate the recognisable
+ * phrases and date forms; anything unmatched is left as-is rather than mangled, and
+ * callers keep the original so the UI can show it.
+ */
+// ORDER MATTERS: longer, more specific phrases must come before the generic anchors
+// they contain, or e.g. 离店 fires inside 离店后原路退还 and destroys it. Clause
+// replacements are space-padded; runs of spaces are collapsed at the end.
+const POLICY_PHRASES: [RegExp, string | ((m: RegExpMatchArray) => string)][] = [
+  // 1. dates, most specific form first: 10月10日24:00前 → before 24:00 on 10 Oct
+  [
+    /(\d{1,2})月(\d{1,2})日\s*(\d{1,2}:\d{2})前/g,
+    (m) => ` before ${m[3]} on ${+m[2]} ${MONTHS[+m[1] - 1]} `,
+  ],
+  [/(\d{1,2})月(\d{1,2})日\s*(\d{1,2}:\d{2})/g, (m) => `${+m[2]} ${MONTHS[+m[1] - 1]}, ${m[3]}`],
+  [/(\d{1,2})月(\d{1,2})日/g, (m) => `${+m[2]} ${MONTHS[+m[1] - 1]}`],
+  [/(\d{1,2}):(\d{2})前/g, (m) => ` before ${m[1]}:${m[2]} `],
+
+  // 2. multi-word clauses that embed an anchor word
+  [/离店后原路退还/g, ' refunded to the original payment method after check-out '],
+  [/之后取消订单将扣除全部房费/g, ' after that, cancelling forfeits the full amount '],
+  [/取消订单可退还全部房费/g, ' cancel for a full refund '],
+  [/取消订单将扣除首晚房费/g, ' cancelling forfeits the first night '],
+  [/取消订单将扣除全部房费/g, ' cancelling forfeits the full amount '],
+  [/入住前(\d+)天/g, (m) => `${m[1]} day${m[1] === '1' ? '' : 's'} before check-in`],
+  [/标准入住(\d+)人/g, (m) => ` standard occupancy ${m[1]} guests `],
+  [/无纠纷不扣押/g, ' not withheld if there are no disputes '],
+  [/下单后入住前通过平台支付/g, ' paid through the platform after booking, before check-in '],
+  [/下单时支付/g, ' paid at booking '],
+  [/免押入住/g, ' no deposit required '],
+  [/订房更轻松/g, ' easier booking '],
+  [/请仔细阅读房东其他要求/g, " please read the host's other requirements carefully "],
+  [/需要自带厨具/g, ' bring your own cookware '],
+  [/厨房每次做完饭要自己洗碗呢?/g, ' wash your own dishes after cooking '],
+  [/不收费拍摄/g, ' photography allowed, free of charge '],
+  [/聚会需要自行收拾并恢复房间原状/g, ' after a party you must tidy up and restore the room '],
+  [/夜间(\d+)点后不能制造噪音/g, (m) => ` no noise after ${m[1]}:00 `],
+  [/可加(\d+)人/g, (m) => ` ${m[1]} extra guest${m[1] === '1' ? '' : 's'} allowed `],
+  // Both ¥50/人晚 and ¥50/人/晚 occur in the wild.
+  [/¥(\d+)\s*\/\s*人\s*\/?\s*晚/g, (m) => ` ¥${m[1]} per person per night `],
+  [/不可加人/g, ' extra guests not allowed '],
+  [/每人每晚/g, ' per person per night '],
+  [/不可取消/g, ' non-refundable '],
+  [/免费取消/g, ' free cancellation '],
+
+  // 3. bare anchors last
+  [/现在预订/g, 'Book now'],
+  [/入住当天/g, 'On the check-in day'],
+  [/入住后/g, 'After check-in'],
+  [/离店/g, 'Check-out'],
+  [/押金/g, 'deposit'],
+  [/房费/g, 'room charge'],
+];
+
+/** Tujia's overall-rating word (commentModule → scoreTitle / scoreTitleV2). */
+const RATING_LABEL_MAP: Record<string, string> = {
+  超赞: 'Excellent',
+  超棒: 'Superb',
+  很好: 'Very good',
+  棒: 'Great',
+  好: 'Good',
+  不错: 'Decent',
+  一般: 'Average',
+};
+export const translateRatingLabel = (cn: string): string => RATING_LABEL_MAP[cn] || cn;
+
+/** Reviewer display names and stay-length buckets are Chinese phrases, not numbers. */
+const REVIEW_META_MAP: Record<string, string> = {
+  匿名用户: 'Anonymous',
+  住宿一晚: '1 night',
+  小住几晚: 'a few nights',
+  住宿约一周: 'about a week',
+  住宿超一周: 'over a week',
+  住宿数晚: 'several nights',
+};
+export const translateReviewMeta = (cn: string): string => REVIEW_META_MAP[cn] || cn;
+
+/**
+ * The four `houseSummary` chips on the detail page — dense, template-built strings
+ * like `2卧室·1厅1卫1厨` or `2床·可住4人 · (可另加1人，¥50/人晚)`. Translated segment by
+ * segment because no dictionary would cover the combinations.
+ */
+const SUMMARY_PATTERNS: [RegExp, string | ((m: RegExpMatchArray) => string)][] = [
+  [/可另加(\d+)人/g, (m) => `${m[1]} extra guest${m[1] === '1' ? '' : 's'} allowed`],
+  [/¥(\d+)\s*\/\s*人\s*\/?\s*晚/g, (m) => `¥${m[1]} per person per night`],
+  [/可住(\d+)人/g, (m) => `sleeps ${m[1]}`],
+  // 2卧室·1厅1卫1厨 runs these together with no separator, so each emits its own comma.
+  [/(\d+)卧室/g, (m) => `${m[1]} bedroom${m[1] === '1' ? '' : 's'}, `],
+  [/(\d+)厅/g, (m) => `${m[1]} living room, `],
+  [/(\d+)卫/g, (m) => `${m[1]} bathroom${m[1] === '1' ? '' : 's'}, `],
+  [/(\d+)厨/g, (m) => `${m[1]} kitchen, `],
+  [/(\d+)床/g, (m) => `${m[1]} bed${m[1] === '1' ? '' : 's'}`],
+  [/㎡/g, ' m²'],
+  [/(\d+)份早餐/g, (m) => `breakfast for ${m[1]}`],
+  [/无早餐/g, 'No breakfast'],
+  [/整套房屋/g, 'Entire place'],
+  [/独立单间/g, 'Private room'],
+  [/公共卫浴/g, 'Shared bathroom'],
+  [/独立卫生间/g, 'Private bathroom'],
+  [/复式/g, 'Duplex'],
+  [/公寓/g, 'Apartment'],
+  [/别墅/g, 'Villa'],
+];
+
+export function translateSummaryItem(cn: string): string {
+  if (!cn) return '';
+  let out = cn;
+  for (const [re, rep] of SUMMARY_PATTERNS) {
+    out = out.replace(re, (...args) => {
+      const m = args.slice(0, -2) as unknown as RegExpMatchArray;
+      return typeof rep === 'function' ? rep(m) : rep;
+    });
+  }
+  return out
+    .replace(/·/g, ' · ')
+    .replace(/（/g, ' (').replace(/）/g, ')')
+    .replace(/，/g, ', ')
+    .replace(/,\s*·/g, ' ·')      // trailing comma before a separator
+    .replace(/,\s*,/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^\s*·\s*/, '')
+    .replace(/[,\s]+$/, '')       // trailing comma at the end
+    .replace(/\s+([,.)])/g, '$1')
+    .trim();
+}
+
+export function translatePolicyText(cn: string): string {
+  if (!cn) return '';
+  let out = cn;
+  for (const [re, rep] of POLICY_PHRASES) {
+    out = out.replace(re, (...args) => {
+      const m = args.slice(0, -2) as unknown as RegExpMatchArray;
+      return typeof rep === 'function' ? rep(m) : rep;
+    });
+  }
+  // Chinese punctuation → Latin, so the result reads as one sentence.
+  return out
+    .replace(/（/g, ' (').replace(/）/g, ')')
+    .replace(/，/g, ', ').replace(/。/g, '. ').replace(/、/g, ', ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.)])/g, '$1') // no space before punctuation
+    .replace(/\(\s+/g, '(')
+    .trim();
+}
+
+/** True when a string still holds CJK characters — used to flag partial translations. */
+export const hasChinese = (s: string): boolean => /[一-鿿]/.test(s);
 
 export interface Occupancy {
   bedrooms: number | null;

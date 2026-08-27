@@ -7,8 +7,25 @@ import {
   Occupancy,
   Layout,
 } from '../utils/translator';
-import { distanceToCantonFairKm, findNearestMetro } from '../utils/geo';
-import { cnyToEur } from '../utils/currency';
+import { distanceToLandmarkKm, findNearestMetro } from '../utils/geo';
+import { cnyToEur, cnyToEurOrNull, parsePrice } from '../utils/currency';
+import { cityOrDefault, resolveLandmark, DEFAULT_CITY_ID, type Landmark } from '../catalog';
+
+/**
+ * Which city the results belong to, and which anchor distances are measured from.
+ * Passed in rather than sniffed off each item: the search request already knows,
+ * and the per-item `cityName` is Chinese and occasionally absent.
+ */
+export interface MapContext {
+  cityId: string;
+  landmark: Landmark | null;
+}
+
+/** Build a mapping context from a cityId and an optional landmark key. */
+export function mapContext(cityId: string, landmarkKey?: string): MapContext {
+  const city = cityOrDefault(cityId);
+  return { cityId: city.id, landmark: resolveLandmark(city, landmarkKey) };
+}
 
 /** One entry of `unitSummeries` on a search result item. */
 interface UnitSummary {
@@ -27,8 +44,11 @@ const summaryText = (summaries: UnitSummary[], textType: string): string =>
  * Field names here are taken from a live response, not guessed — the list endpoint
  * carries `finalPrice`/`commentBrief`/`houseTagsForCD`, and does NOT carry the
  * `price`/`commentScore`/`facilityList` names the detail-style payloads use.
+ *
+ * `ctx` scopes the geo work to one city — nearest-station is looked up in that city's
+ * metro catalog, and landmark distance against that city's anchor.
  */
-export function mapToEnglish(raw: any): HotelEn {
+export function mapToEnglish(raw: any, ctx: MapContext = mapContext(DEFAULT_CITY_ID)): HotelEn {
   const summaries: UnitSummary[] = Array.isArray(raw.unitSummeries) ? raw.unitSummeries : [];
   const occupancy: Occupancy = parseOccupancy(summaryText(summaries, 'CANLIVEDESC'));
   const layout: Layout = parseLayout(summaryText(summaries, 'HOUSELEVEL'));
@@ -46,11 +66,11 @@ export function mapToEnglish(raw: any): HotelEn {
   const has = (...needles: string[]): boolean =>
     amenitiesCn.some((tag) => needles.some((n) => tag.includes(n)));
 
-  const finalPrice: number = raw.finalPrice ?? 0;
-  const originalPrice: number | null =
-    typeof raw.productPrice === 'number' && raw.productPrice !== finalPrice
-      ? raw.productPrice
-      : null;
+  // Both fields arrive masked ("1??") on an anonymous session — see parsePrice.
+  const price = parsePrice(raw.finalPrice);
+  const original = parsePrice(raw.productPrice);
+  const originalCNY =
+    original.exact !== null && original.exact !== price.exact ? original.exact : null;
 
   const lng = typeof raw.longitude === 'number' ? raw.longitude : null;
   const lat = typeof raw.latitude === 'number' ? raw.latitude : null;
@@ -63,12 +83,17 @@ export function mapToEnglish(raw: any): HotelEn {
     nameOriginal: raw.unitName || '',
 
     price: {
-      perNightCNY: finalPrice,
-      perNightEUR: cnyToEur(finalPrice),
-      originalCNY: originalPrice,
-      originalEUR: originalPrice === null ? null : cnyToEur(originalPrice),
+      perNightCNY: price.exact,
+      perNightEUR: cnyToEurOrNull(price.exact),
+      originalCNY,
+      originalEUR: cnyToEurOrNull(originalCNY),
       cleaningFeeCNY: raw.cleaningAmount ?? 0,
       extraGuestFeeCNY: raw.addPeopleAmount ?? 0,
+      masked: price.masked,
+      fromCNY: price.from,
+      toCNY: price.to,
+      fromEUR: cnyToEurOrNull(price.from),
+      toEUR: cnyToEurOrNull(price.to),
     },
     currency: 'EUR',
 
@@ -86,7 +111,7 @@ export function mapToEnglish(raw: any): HotelEn {
       lng,
       lat,
       nearestMetro: (() => {
-        const m = findNearestMetro(lng ?? undefined, lat ?? undefined);
+        const m = findNearestMetro(ctx.cityId, lng ?? undefined, lat ?? undefined);
         return m
           ? {
               station: m.nameEn,
@@ -97,7 +122,8 @@ export function mapToEnglish(raw: any): HotelEn {
             }
           : null;
       })(),
-      distanceToCantonFairKm: distanceToCantonFairKm(lng ?? undefined, lat ?? undefined),
+      distanceToLandmarkKm: distanceToLandmarkKm(ctx.landmark, lng ?? undefined, lat ?? undefined),
+      landmark: ctx.landmark?.name ?? null,
       distanceToSearchAnchorM: typeof raw.distance === 'number' ? raw.distance : null,
       searchAnchor: raw.navigation?.name || navigation?.landmarkDesc?.replace(/^距/, '') || null,
     },

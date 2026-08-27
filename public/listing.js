@@ -5,6 +5,10 @@ const ID = params.get('id');
 const CHECK_IN = params.get('checkIn') || '';
 const CHECK_OUT = params.get('checkOut') || '';
 const GUESTS = params.get('guests') || '';
+// Carried over from the search that linked here, so the distance shown below is
+// measured from the same anchor the result card used.
+const CITY = params.get('city') || '';
+const LANDMARK = params.get('landmark') || '';
 
 const esc = (s) =>
   String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
@@ -25,6 +29,8 @@ async function load() {
   if (!ID) return fail('No listing selected', 'This page needs an ?id= parameter.');
 
   const q = new URLSearchParams({ checkIn: CHECK_IN, checkOut: CHECK_OUT, guests: GUESTS });
+  if (CITY) q.set('city', CITY);
+  if (LANDMARK) q.set('landmark', LANDMARK);
   let d;
   try {
     const res = await fetch(`/api/v1/hotel/${encodeURIComponent(ID)}?${q}`);
@@ -85,11 +91,21 @@ function render(d) {
       }
     </div>
     <aside class="buy">
-      <div class="buy-price">
-        ${d.price.originalEUR ? `<span class="was">€${d.price.originalEUR}</span>` : ''}
-        <span class="now">€${d.price.perNightEUR}</span><span class="per">/night</span>
-      </div>
-      <p class="buy-cny">¥${d.price.perNightCNY} CNY${d.price.discountLabel ? ` · ${esc(d.price.discountLabel)}` : ''}</p>
+      ${
+        // Anonymous session: Tujia masks the figure ("1??") rather than withholding
+        // it, so the range below is exactly what it reveals — no guessing involved.
+        d.price.masked && d.price.fromEUR != null
+          ? `<div class="buy-price">
+               <span class="now">€${d.price.fromEUR}–€${d.price.toEUR}</span><span class="per">/night</span>
+             </div>
+             <p class="buy-cny">¥${d.price.fromCNY}–${d.price.toCNY} approx${d.price.discountLabel ? ` · ${esc(d.price.discountLabel)}` : ''}</p>
+             <p class="buy-stay">Tujia only shows exact prices to logged-in users.</p>`
+          : `<div class="buy-price">
+               ${d.price.originalEUR ? `<span class="was">€${d.price.originalEUR}</span>` : ''}
+               <span class="now">${d.price.perNightEUR == null ? '—' : `€${d.price.perNightEUR}`}</span><span class="per">/night</span>
+             </div>
+             <p class="buy-cny">${d.price.perNightCNY == null ? 'price unavailable' : `¥${d.price.perNightCNY} CNY`}${d.price.discountLabel ? ` · ${esc(d.price.discountLabel)}` : ''}</p>`
+      }
       ${stay ? `<p class="buy-stay">${esc(stay)}</p>` : ''}
       ${d.price.minNights && d.price.minNights > 1 ? `<p class="buy-stay">Minimum ${d.price.minNights} nights</p>` : ''}
       <a class="buy-btn" href="${esc(d.bookUrl)}" target="_blank" rel="noreferrer noopener">Book on Tujia ↗</a>
@@ -120,8 +136,8 @@ function render(d) {
           : ''
       }
       ${
-        d.location.distanceToCantonFairKm != null
-          ? `<li class="fair">${d.location.distanceToCantonFairKm} km to the Canton Fair complex</li>`
+        d.location.distanceToLandmarkKm != null && d.location.landmark
+          ? `<li class="fair">${d.location.distanceToLandmarkKm} km to the ${esc(d.location.landmark)}</li>`
           : ''
       }
     </ul>

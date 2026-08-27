@@ -24,8 +24,12 @@ router.get('/:id', async (req: Request, res: Response) => {
   const checkIn = typeof req.query.checkIn === 'string' ? req.query.checkIn : '';
   const checkOut = typeof req.query.checkOut === 'string' ? req.query.checkOut : '';
   const guests = Number(req.query.guests) || 1;
+  // Both optional: the mapper resolves the city from the payload's own cityName and
+  // falls back to these only when it names something we do not support.
+  const cityId = typeof req.query.city === 'string' ? req.query.city : undefined;
+  const landmarkKey = typeof req.query.landmark === 'string' ? req.query.landmark : undefined;
 
-  const cacheKey = `detail:${id}:${checkIn}:${checkOut}:${guests}`;
+  const cacheKey = `detail:${id}:${checkIn}:${checkOut}:${guests}:${cityId ?? ''}:${landmarkKey ?? ''}`;
   const cached = getCache(cacheKey);
   if (cached) {
     res.json({ ...cached, cached: true });
@@ -39,7 +43,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    const hotel = mapDetailToEnglish(raw, id);
+    const hotel = mapDetailToEnglish(raw, id, { cityId, landmarkKey });
     setCache(cacheKey, hotel);
     res.json({ ...hotel, cached: false });
   } catch (err: any) {

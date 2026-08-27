@@ -17,7 +17,17 @@ export interface SearchRequest {
   acceptForeigners?: boolean;
   nearMetro?: boolean;
   freeParking?: boolean;
-  maxDistanceToFairKm?: number;
+  /**
+   * Local filter: keep only listings within this many km of the city's distance
+   * anchor. Tujia has no server-side condition for it, so `routes/search.ts` walks
+   * several upstream pages to fill one response — see `nextPageIndex`.
+   */
+  maxDistanceToLandmarkKm?: number;
+  /**
+   * Which anchor to measure from, from `City.landmarks[].key` (e.g. `canton-fair`,
+   * `shenzhen-world`). Defaults to the city's first landmark.
+   */
+  landmarkKey?: string;
   metroStationId?: string;
   metroStationName?: string;
   metroLng?: number;
@@ -46,12 +56,18 @@ export interface LocationEn {
   lng: number | null;
   lat: number | null;
   /**
-   * Closest metro station of the 406 in the catalog, by straight-line distance from the
+   * Closest metro station in this city's catalog, by straight-line distance from the
    * unit's own coordinates. Independent of whether the search was anchored on a station.
+   * Null for a city with no metro network.
    */
   nearestMetro: NearestMetroEn | null;
-  /** Real haversine distance to the Canton Fair complex, in km. Null if the unit has no coordinates. */
-  distanceToCantonFairKm: number | null;
+  /**
+   * Real haversine distance to the city's distance anchor, in km. Null if the unit has
+   * no coordinates, or the city has no landmark.
+   */
+  distanceToLandmarkKm: number | null;
+  /** English name of the anchor above, e.g. "Canton Fair complex". */
+  landmark: string | null;
   /** Tujia's own distance to whatever landmark the search was anchored on (metro station, etc.), in metres. */
   distanceToSearchAnchorM: number | null;
   /** The landmark that `distanceToSearchAnchorM` is measured from, e.g. "万胜围地铁站". */
@@ -75,14 +91,24 @@ export interface RoomEn {
 }
 
 export interface PriceEn {
-  /** What you actually pay per night, after discounts. */
-  perNightCNY: number;
-  perNightEUR: number;
+  /** What you actually pay per night, after discounts. Null when Tujia masked it. */
+  perNightCNY: number | null;
+  perNightEUR: number | null;
   /** Pre-discount nightly rate, when Tujia reports one. */
   originalCNY: number | null;
   originalEUR: number | null;
   cleaningFeeCNY: number;
   extraGuestFeeCNY: number;
+  /**
+   * True when the session is anonymous and Tujia returned a masked figure ("1??")
+   * instead of a number. The mask still pins the magnitude, so `fromCNY`/`toCNY`
+   * carry the range it implies — 100–199 for "1??" — rather than nothing at all.
+   */
+  masked: boolean;
+  fromCNY: number | null;
+  toCNY: number | null;
+  fromEUR: number | null;
+  toEUR: number | null;
 }
 
 export interface HotelEn {
@@ -139,10 +165,17 @@ export interface HotelDetailEn {
     highlights: string[];
   };
   price: {
-    perNightCNY: number;
-    perNightEUR: number;
+    /** Null when Tujia masked the figure — see `masked`. */
+    perNightCNY: number | null;
+    perNightEUR: number | null;
     originalCNY: number | null;
     originalEUR: number | null;
+    /** Anonymous session: Tujia returns "1??" instead of a number. */
+    masked: boolean;
+    fromCNY: number | null;
+    toCNY: number | null;
+    fromEUR: number | null;
+    toEUR: number | null;
     discountLabel: string | null;
     minNights: number | null;
     bookable: boolean;
@@ -171,7 +204,9 @@ export interface HotelDetailEn {
     area: string;
     lng: number | null;
     lat: number | null;
-    distanceToCantonFairKm: number | null;
+    distanceToLandmarkKm: number | null;
+    /** English name of the anchor above, e.g. "Canton Fair complex". */
+    landmark: string | null;
     nearestMetro: NearestMetroEn | null;
     mapImageUrl: string | null;
   };
@@ -236,4 +271,8 @@ export interface SearchResponse {
   /** Upstream pages walked to fill this page. Absent when no local-only filter was applied. */
   pagesScanned?: number;
   cached: boolean;
+  /** The resolved city, so the client can confirm which one answered. */
+  city?: { id: string; name: string; nameCn: string };
+  /** The anchor `LocationEn.distanceToLandmarkKm` was measured from, if any. */
+  landmark?: { key: string; name: string } | null;
 }

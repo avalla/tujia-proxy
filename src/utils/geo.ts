@@ -3,14 +3,15 @@
  * We never convert to WGS84 — we only ever measure Tujia points against other Tujia
  * points, so staying inside bd09 keeps the datum consistent and the error at zero.
  *
- * Reference points below are Tujia's own, lifted from the `conditions/fetch` taxonomy,
- * so they are bd09 by construction.
+ * Reference points are Tujia's own, lifted from the `conditions/fetch` taxonomy into
+ * `src/catalog/cities.ts`, so they are bd09 by construction.
+ *
+ * Everything here is city-scoped: Guangzhou's 400-odd stations and Shenzhen's are
+ * separate networks, and measuring a Shenzhen unit against Guangzhou's catalog would
+ * report a "nearest station" 100 km away rather than none.
  */
 
-import { ALL_STATIONS } from '../catalog/filters.generated';
-
-/** 中国进出口商品交易会（广交会）展馆 — taxonomy id 5_23158498 */
-export const CANTON_FAIR = { lng: 113.36747, lat: 23.106647 };
+import { allStations, type Landmark } from '../catalog';
 
 const EARTH_RADIUS_KM = 6371;
 const toRad = (deg: number): number => (deg * Math.PI) / 180;
@@ -28,11 +29,20 @@ export function haversineKm(
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(s));
 }
 
-export function distanceToCantonFairKm(lng?: number, lat?: number): number | null {
+/**
+ * Straight-line distance to a city's chosen anchor (the Canton Fair complex, the
+ * Shenzhen World convention centre, …), in km. Null when either point is unknown.
+ */
+export function distanceToLandmarkKm(
+  landmark: Landmark | null | undefined,
+  lng?: number,
+  lat?: number
+): number | null {
+  if (!landmark) return null;
   if (typeof lng !== 'number' || typeof lat !== 'number' || (lng === 0 && lat === 0)) {
     return null;
   }
-  return Math.round(haversineKm({ lng, lat }, CANTON_FAIR) * 10) / 10;
+  return Math.round(haversineKm({ lng, lat }, landmark) * 10) / 10;
 }
 
 /**
@@ -50,18 +60,30 @@ export interface NearestMetro {
   walkMinutes: number;
 }
 
+interface IndexedStation {
+  value: string;
+  cn: string;
+  en: string;
+  lng: number;
+  lat: number;
+  lines: string[];
+}
+
 /**
- * Stations collapsed by name: Tujia lists an interchange once per line, each with its
- * own condition value, so "Kecun" appears twice. Merge them into one entry that knows
- * all its lines, and keep the first condition value so the result stays searchable.
+ * Stations collapsed by name, per city: Tujia lists an interchange once per line, each
+ * with its own condition value, so "Kecun" appears twice. Merge them into one entry
+ * that knows all its lines, and keep the first condition value so the result stays
+ * searchable. Built lazily and memoized — a city nobody searches costs nothing.
  */
-const STATIONS = (() => {
-  const byName = new Map<
-    string,
-    { value: string; cn: string; en: string; lng: number; lat: number; lines: string[] }
-  >();
-  for (const s of ALL_STATIONS) {
-    if (s.lng === 0 && s.lat === 0) continue; // line-level pseudo-entries ("全线")
+const STATION_INDEX = new Map<string, IndexedStation[]>();
+
+function stationsFor(cityId: string): IndexedStation[] {
+  const cached = STATION_INDEX.get(cityId);
+  if (cached) return cached;
+
+  const byName = new Map<string, IndexedStation>();
+  for (const s of allStations(cityId)) {
+    if (!s.lng || !s.lat) continue; // line-level pseudo-entries ("全线")
     const existing = byName.get(s.en);
     if (existing) {
       if (!existing.lines.includes(s.line)) existing.lines.push(s.line);
@@ -70,24 +92,34 @@ const STATIONS = (() => {
         value: s.value,
         cn: s.cn,
         en: s.en,
-        lng: s.lng ?? 0,
-        lat: s.lat ?? 0,
+        lng: s.lng,
+        lat: s.lat,
         lines: [s.line],
       });
     }
   }
-  return [...byName.values()];
-})();
+
+  const list = [...byName.values()];
+  STATION_INDEX.set(cityId, list);
+  return list;
+}
 
 /** Average walking speed, km/h — used to turn distance into a legible number. */
 const WALK_KMH = 4.5;
 
-export function findNearestMetro(lng?: number, lat?: number): NearestMetro | null {
+export function findNearestMetro(
+  cityId: string,
+  lng?: number,
+  lat?: number
+): NearestMetro | null {
   if (typeof lng !== 'number' || typeof lat !== 'number' || (lng === 0 && lat === 0)) return null;
 
-  let best: (typeof STATIONS)[number] | null = null;
+  const stations = stationsFor(cityId);
+  if (!stations.length) return null; // city with no metro, or catalog not generated yet
+
+  let best: IndexedStation | null = null;
   let bestKm = Infinity;
-  for (const station of STATIONS) {
+  for (const station of stations) {
     const d = haversineKm({ lng, lat }, station);
     if (d < bestKm) {
       bestKm = d;

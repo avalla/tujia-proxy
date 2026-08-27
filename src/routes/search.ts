@@ -1,16 +1,30 @@
 import { Router, Request, Response } from 'express';
 import { TujiaClient } from '../services/tujiaClient';
-import { mapToEnglish } from '../services/mapper';
+import { mapToEnglish, mapContext } from '../services/mapper';
 import { SearchRequest, SearchResponse, HotelEn } from '../types';
 import { getCache, setCache } from '../middleware/cache';
 import { CONFIG } from '../config';
+import { findCity, CITIES, DEFAULT_CITY_ID, hasCatalog } from '../catalog';
 
 const router = Router();
 const client = new TujiaClient();
 
 router.post('/', async (req: Request, res: Response) => {
+  // An unknown cityId is rejected rather than silently searched: Tujia would happily
+  // answer for a city we have no metro catalog or district vocabulary for, and every
+  // result would come back with a null nearest-station and untranslated districts.
+  const city = findCity(req.body.cityId ?? DEFAULT_CITY_ID);
+  if (!city || !hasCatalog(city.id)) {
+    res.status(400).json({
+      error: 'Unsupported city',
+      message: `No catalog for city "${req.body.cityId}".`,
+      supported: CITIES.filter((c) => hasCatalog(c.id)).map((c) => ({ id: c.id, name: c.name })),
+    });
+    return;
+  }
+
   const params: SearchRequest = {
-    cityId: req.body.cityId || '45',
+    cityId: city.id,
     checkIn: req.body.checkIn || '2026-10-10',
     checkOut: req.body.checkOut || '2026-11-05',
     pageIndex: req.body.pageIndex ?? 0,
@@ -25,7 +39,10 @@ router.post('/', async (req: Request, res: Response) => {
     acceptForeigners: req.body.acceptForeigners ?? false,
     nearMetro: req.body.nearMetro ?? false,
     freeParking: req.body.freeParking ?? false,
-    maxDistanceToFairKm: req.body.maxDistanceToFairKm,
+    // `maxDistanceToFairKm` is the pre-multi-city spelling, still accepted so older
+    // callers and the curl probes in test-*.sh keep working.
+    maxDistanceToLandmarkKm: req.body.maxDistanceToLandmarkKm ?? req.body.maxDistanceToFairKm,
+    landmarkKey: req.body.landmarkKey,
     metroStationId: req.body.metroStationId,
     metroStationName: req.body.metroStationName,
     metroLng: req.body.metroLng,
@@ -40,10 +57,11 @@ router.post('/', async (req: Request, res: Response) => {
     return;
   }
 
-  // Tujia has no condition for "distance to the Canton Fair", so it can only be applied
+  // Tujia has no condition for "distance to landmark X", so it can only be applied
   // after mapping. Filtering a single 10-unit page would discard almost everything, so
   // when that filter is active we walk pages until the page is full or the budget runs out.
-  const wantsFairFilter = params.maxDistanceToFairKm !== undefined;
+  const ctx = mapContext(params.cityId, params.landmarkKey);
+  const wantsLandmarkFilter = params.maxDistanceToLandmarkKm !== undefined && ctx.landmark !== null;
   const pageSize = params.pageSize ?? 10;
   const MAX_PAGES = 8;
 
@@ -58,7 +76,7 @@ router.post('/', async (req: Request, res: Response) => {
     const firstPage = params.pageIndex ?? 0;
     let page = firstPage;
 
-    for (; pagesScanned < (wantsFairFilter ? MAX_PAGES : 1); page++) {
+    for (; pagesScanned < (wantsLandmarkFilter ? MAX_PAGES : 1); page++) {
       const raw = await client.search({ ...params, pageIndex: page });
       pagesScanned++;
 
@@ -71,13 +89,13 @@ router.post('/', async (req: Request, res: Response) => {
       // The amenity/price/metro filters are already applied server-side by the
       // `conditions` payload, so we do NOT re-filter on them here — the tag vocabulary
       // in the response differs from the filter vocabulary and would wrongly drop rows.
-      const mapped: HotelEn[] = items.map(mapToEnglish);
+      const mapped: HotelEn[] = items.map((item: any) => mapToEnglish(item, ctx));
       kept.push(
-        ...(wantsFairFilter
+        ...(wantsLandmarkFilter
           ? mapped.filter(
               (h) =>
-                h.location.distanceToCantonFairKm !== null &&
-                h.location.distanceToCantonFairKm <= params.maxDistanceToFairKm!
+                h.location.distanceToLandmarkKm !== null &&
+                h.location.distanceToLandmarkKm <= params.maxDistanceToLandmarkKm!
             )
           : mapped)
       );
@@ -108,9 +126,11 @@ router.post('/', async (req: Request, res: Response) => {
       // local-filter scan can burn its page budget in a sparse stretch and keep zero
       // while plenty remains further on. Saying "that's all" there would be wrong.
       hasMore: !exhausted,
-      scanned: wantsFairFilter ? scanned : undefined,
-      pagesScanned: wantsFairFilter ? pagesScanned : undefined,
+      scanned: wantsLandmarkFilter ? scanned : undefined,
+      pagesScanned: wantsLandmarkFilter ? pagesScanned : undefined,
       cached: false,
+      city: { id: city.id, name: city.name, nameCn: city.nameCn },
+      landmark: ctx.landmark && { key: ctx.landmark.key, name: ctx.landmark.name },
     };
 
     setCache(cacheKey, response);

@@ -72,11 +72,11 @@ function load(): Map<string, string> {
     cache = null;
     throw new MissingCookiesError(file, 'The Tujia cookie file is empty.');
   }
+  // An anonymous session is fine — search, the taxonomy and listing detail all answer
+  // without a login. It only costs Tujia's member pricing, so this is a note, not a
+  // warning, and certainly not an error.
   if (!jar.has('tujia.com_PortalContext_UserToken')) {
-    console.warn(
-      `[tujia] ${file} has no tujia.com_PortalContext_UserToken — ` +
-        'search will likely fail with a login error.'
-    );
+    console.log(`[tujia] ${file} is an anonymous session — public prices, no member discounts.`);
   }
 
   cache = { mtimeMs: stat.mtimeMs, jar };
@@ -103,5 +103,18 @@ export function hasCookies(): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * True for a session with no login token. Everything still works — it only means
+ * Tujia will mask prices, which the health endpoint says out loud so a range on
+ * every card does not look like a bug.
+ */
+export function isAnonymous(): boolean {
+  try {
+    return !load().has('tujia.com_PortalContext_UserToken');
+  } catch {
+    return true;
   }
 }

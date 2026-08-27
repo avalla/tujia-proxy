@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { TujiaScraper } from './scraper';
+import { CITIES, cityOrDefault, findCity } from './catalog/cities';
 
 const args = process.argv.slice(2);
 
@@ -13,9 +14,19 @@ function hasFlag(flag: string): boolean {
 }
 
 async function main() {
+  // `--city` takes an id or a slug; the registry supplies the name so the output
+  // filename and the banner cannot drift from the id being scraped.
+  const cityKey = parseArg('--city', '45');
+  if (!findCity(cityKey)) {
+    throw new Error(
+      `Unknown city "${cityKey}". Known: ${CITIES.map((c) => `${c.slug}=${c.id}`).join(', ')}`
+    );
+  }
+  const city = cityOrDefault(cityKey);
+
   const scraper = new TujiaScraper({
-    cityId: parseArg('--city', '45'),
-    cityName: parseArg('--city-name', 'guangzhou'),
+    cityId: city.id,
+    cityName: parseArg('--city-name', city.slug),
     checkIn: parseArg('--checkin', '2026-10-10'),
     checkOut: parseArg('--checkout', '2026-11-05'),
     guestCount: parseInt(parseArg('--guests', '1'), 10),
@@ -25,7 +36,7 @@ async function main() {
   });
 
   console.log('═══════════════════════════════════════');
-  console.log('  Tujia Scraper — Canton Fair Edition');
+  console.log(`  Tujia Scraper — ${city.name}`);
   console.log('═══════════════════════════════════════');
   console.log(`City:    ${scraper['options'].cityName} (ID: ${scraper['options'].cityId})`);
   console.log(`Dates:   ${scraper['options'].checkIn} → ${scraper['options'].checkOut}`);

@@ -90,6 +90,13 @@ body {
 .fair-badge .dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none;
 }
+/* An author `display` beats the UA sheet's [hidden] rule, so restate it per element
+   that sets one and is toggled from JS (the city picker hides both of these). */
+.fair-badge[hidden] { display: none; }
+.field[hidden] { display: none; }
+/* Anonymous-session price ranges and the summary note that explains them. */
+.cny.masked { font-style: italic; opacity: .85; }
+.summary .warn { color: var(--ink-2); font-style: italic; }
 
 /* ── layout ──────────────────────────────────────────────────────── */
 .layout {

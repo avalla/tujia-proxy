@@ -1,17 +1,31 @@
 import axios, { AxiosInstance } from 'axios';
 import { CONFIG } from '../config';
 import { SearchRequest } from '../types';
-import { AMENITY_GROUPS, SORT_OPTIONS, METRO_LINES } from '../catalog/filters.generated';
+import { ALL_CATALOGS, cityOrDefault } from '../catalog';
 import { cookieHeader } from './cookieJar';
 
-/** Flat lookup of every catalog filter by its condition value. */
+/**
+ * Flat lookups across EVERY city's catalog, keyed by condition value.
+ *
+ * Deliberately not per-city: Tujia's filter and whole-line ids are globally unique,
+ * and looking them up globally means a client that sends a Shenzhen line id with a
+ * mis-set cityId still produces a well-formed condition instead of a silent drop.
+ * The city itself is carried by the type-1 condition, which is always built from
+ * `params.cityId`.
+ */
 const AMENITY_BY_VALUE = new Map(
-  AMENITY_GROUPS.flatMap((g) => g.items).map((i) => [i.value, i])
+  ALL_CATALOGS.flatMap((c) => c.amenityGroups.flatMap((g) => g.items)).map((i) => [i.value, i])
+);
+
+const SORT_BY_VALUE = new Map(
+  ALL_CATALOGS.flatMap((c) => c.sortOptions).map((s) => [s.value, s])
 );
 
 /** Whole-line filters, keyed by their `7_*` condition value. */
 const LINE_BY_VALUE = new Map(
-  METRO_LINES.filter((l) => l.filterValue).map((l) => [l.filterValue as string, l])
+  ALL_CATALOGS.flatMap((c) => c.metroLines)
+    .filter((l) => l.filterValue)
+    .map((l) => [l.filterValue as string, l])
 );
 
 /** Opaque page ids the H5 app sends. They are not validated, but are echoed into feLog. */
@@ -74,8 +88,14 @@ export class TujiaClient {
       baseURL: CONFIG.TUJIA_API_URL,
       timeout: 15000,
       headers: {
+        // MUST be a mobile UA. m.tujia.com is the mobile site and its sessions are
+        // minted in a mobile context; a desktop UA against one is rejected with
+        // errcode 55999 — the same code a dead session returns, which is why this
+        // took a bisect to find. Verified: one freshly minted session per variant,
+        // desktop UA was the only one that failed. Origin, Sec-Fetch and
+        // `act=keyword_search` are all harmless.
         'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1',
         Accept: 'application/json, text/plain, */*',
         'Content-Type': 'application/json;charset=UTF-8',
         Origin: 'https://m.tujia.com',
@@ -132,9 +152,7 @@ export class TujiaClient {
     }
 
     // 2. Sort order (type 4). Defaults to 欢迎度排序 (most popular).
-    const sortOption =
-      SORT_OPTIONS.find((s) => s.value === params.sort) ||
-      SORT_OPTIONS.find((s) => s.value === '1');
+    const sortOption = SORT_BY_VALUE.get(params.sort || '1') || SORT_BY_VALUE.get('1');
     conditions.push(
       base(sortOption?.cn || '欢迎度排序', 4, sortOption?.value || '1', 4, { selected: true })
     );
@@ -184,13 +202,16 @@ export class TujiaClient {
       })
     );
 
-    // 6. City (type 1) — implicit context, not marked selected.
+    // 6. City (type 1) — implicit context, not marked selected. The cityId in `value`
+    //    is what actually selects the city; the label/coordinates/pinyin come from the
+    //    registry so a Shenzhen search no longer ships Guangzhou's.
+    const city = cityOrDefault(params.cityId);
     conditions.push(
-      base(params.district || '广州', 1, params.cityId, 0, {
-        longitude: 113.27100372314453,
-        latitude: 23.135400772094727,
-        pingYin: 'guangzhou',
-        pinYin: 'guangzhou',
+      base(params.district || city.nameCn, 1, params.cityId, 0, {
+        longitude: city.lng,
+        latitude: city.lat,
+        pingYin: city.pinyin,
+        pinYin: city.pinyin,
       })
     );
 

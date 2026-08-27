@@ -13,8 +13,9 @@ import {
   hasChinese,
   parseLayout,
 } from '../utils/translator';
-import { distanceToCantonFairKm, findNearestMetro } from '../utils/geo';
-import { cnyToEur } from '../utils/currency';
+import { distanceToLandmarkKm, findNearestMetro } from '../utils/geo';
+import { cnyToEur, cnyToEurOrNull, parsePrice } from '../utils/currency';
+import { cityOrDefault, findCity, resolveLandmark } from '../catalog';
 
 /** "¥267" / "187" / 187 → 187 */
 function toNumber(v: any): number {
@@ -44,8 +45,16 @@ function parseTag(t: any): { label: string; count: number } | null {
  *
  * The shape is completely different from the search-list item, so this is a separate
  * mapper from `mapper.ts` on purpose — see CLAUDE.md.
+ *
+ * `hint` carries the city and landmark the search was run in. The payload's own
+ * `positionModule.cityName` is preferred when it names a city we support, since a
+ * detail page can be opened cold from a bookmark with no search behind it.
  */
-export function mapDetailToEnglish(raw: any, unitId: string): HotelDetailEn {
+export function mapDetailToEnglish(
+  raw: any,
+  unitId: string,
+  hint: { cityId?: string; landmarkKey?: string } = {}
+): HotelDetailEn {
   const data = raw?.data ?? {};
   const main = data.mainPart ?? {};
   const top = main.topModule ?? {};
@@ -61,8 +70,12 @@ export function mapDetailToEnglish(raw: any, unitId: string): HotelDetailEn {
   const lng = typeof position.longitude === 'number' ? position.longitude : null;
   const lat = typeof position.latitude === 'number' ? position.latitude : null;
 
-  const finalPrice = toNumber(house.finalPrice);
-  const originalPrice = toNumber(house.productPrice);
+  // NOT toNumber: on an anonymous session these read "1??" / "¥2??", and toNumber's
+  // [\d.]+ match would happily turn that into ¥1. parsePrice keeps the mask honest.
+  const price = parsePrice(house.finalPrice);
+  const original = parsePrice(house.productPrice);
+  const originalCNY =
+    original.exact !== null && original.exact !== price.exact ? original.exact : null;
 
   // `deleted: true` means the property does NOT have it. Listing those as amenities
   // would advertise things the place lacks, so they are split out explicitly.
@@ -82,7 +95,11 @@ export function mapDetailToEnglish(raw: any, unitId: string): HotelDetailEn {
     .map((f: any) => ({ en: translateAmenity(f.name), cn: f.name }));
 
   const layout = parseLayout(String(house.houseSummary || ''));
-  const nearest = findNearestMetro(lng ?? undefined, lat ?? undefined);
+  // The payload names its own city in Chinese (深圳 / 广州); trust that over the hint,
+  // which is absent when the page is opened without a search behind it.
+  const city = findCity(position.cityName) || cityOrDefault(hint.cityId);
+  const landmark = resolveLandmark(city, hint.landmarkKey);
+  const nearest = findNearestMetro(city.id, lng ?? undefined, lat ?? undefined);
 
   const bedrooms = typeof house.bedRoomCount === 'number' ? house.bedRoomCount : null;
   const district = translateDistrict(position.areaName || '');
@@ -120,11 +137,15 @@ export function mapDetailToEnglish(raw: any, unitId: string): HotelDetailEn {
     },
 
     price: {
-      perNightCNY: finalPrice,
-      perNightEUR: cnyToEur(finalPrice),
-      originalCNY: originalPrice && originalPrice !== finalPrice ? originalPrice : null,
-      originalEUR:
-        originalPrice && originalPrice !== finalPrice ? cnyToEur(originalPrice) : null,
+      perNightCNY: price.exact,
+      perNightEUR: cnyToEurOrNull(price.exact),
+      originalCNY,
+      originalEUR: cnyToEurOrNull(originalCNY),
+      masked: price.masked,
+      fromCNY: price.from,
+      toCNY: price.to,
+      fromEUR: cnyToEurOrNull(price.from),
+      toEUR: cnyToEurOrNull(price.to),
       // Tujia's `discount` is a 折 figure: 7.0 means you pay 70% of list, i.e. 30% off.
       discountLabel: (() => {
         const d = parseFloat(house.discount);
@@ -168,7 +189,8 @@ export function mapDetailToEnglish(raw: any, unitId: string): HotelDetailEn {
       area: position.tradeArea || position.poi || '',
       lng,
       lat,
-      distanceToCantonFairKm: distanceToCantonFairKm(lng ?? undefined, lat ?? undefined),
+      distanceToLandmarkKm: distanceToLandmarkKm(landmark, lng ?? undefined, lat ?? undefined),
+      landmark: landmark?.name ?? null,
       nearestMetro: nearest
         ? {
             station: nearest.nameEn,

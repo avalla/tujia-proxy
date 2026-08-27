@@ -6,6 +6,12 @@ const CNY_TO_EUR = 0.13; // mirrors CONFIG.CNY_TO_EUR
 let catalog = null;
 let allStations = []; // flattened, for the filter box
 
+/** The landmark distances are currently measured from. Null for a city with none. */
+const currentLandmark = () =>
+  catalog?.city.landmarks.find((l) => l.key === $('landmark').value) ||
+  catalog?.city.landmarks[0] ||
+  null;
+
 /**
  * Pagination state. `body` is frozen at the moment of the search so "Load more"
  * keeps using the query that produced the current results, even if the user has
@@ -39,11 +45,25 @@ async function boot() {
     syncLocationHint();
   });
   $('search-form').addEventListener('submit', onSubmit);
+  $('landmark').addEventListener('change', syncLandmark);
+  // Every city has its own metro network, districts and filter vocabulary, so
+  // switching one reloads the whole catalog rather than filtering what is loaded.
+  $('city').addEventListener('change', () => loadCatalog($('city').value));
 
+  await loadCatalog();
+}
+
+/**
+ * Fetch and render one city's catalog. Called on boot with no argument (the server
+ * picks the default city) and again on every city change.
+ */
+async function loadCatalog(cityId) {
+  $('catalog-note').textContent = 'Loading catalog…';
   try {
-    const res = await fetch('/api/v1/filters');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    catalog = await res.json();
+    const res = await fetch('/api/v1/filters' + (cityId ? `?city=${encodeURIComponent(cityId)}` : ''));
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.message || 'HTTP ' + res.status);
+    catalog = body;
   } catch (err) {
     $('catalog-note').textContent = 'Could not load filter catalog: ' + err.message;
     return;
@@ -53,15 +73,19 @@ async function boot() {
     line.stations.map((s) => ({ ...s, line: line.en }))
   );
 
+  renderCities();
   renderLines();
   renderStations();
   renderSorts();
   renderAmenities();
+  renderLandmarks();
   syncLocationHint();
 
   const when = new Date(catalog.generatedAt);
-  $('catalog-note').textContent =
-    `${allStations.length} stations · ${catalog.amenityGroups.reduce((n, g) => n + g.items.length, 0)} filters · catalog from ${when.toLocaleDateString('en-GB')}`;
+  const filterCount = catalog.amenityGroups.reduce((n, g) => n + g.items.length, 0);
+  $('catalog-note').textContent = allStations.length
+    ? `${allStations.length} stations · ${filterCount} filters · catalog from ${when.toLocaleDateString('en-GB')}`
+    : `${filterCount} filters · no metro in ${catalog.city.name} · catalog from ${when.toLocaleDateString('en-GB')}`;
 }
 
 /* ── form population ──────────────────────────────────────────────── */
@@ -77,9 +101,63 @@ function populateGuests() {
   }
 }
 
+/** The city picker. Only cities with a generated catalog are offered. */
+function renderCities() {
+  const sel = $('city');
+  sel.textContent = '';
+  for (const c of catalog.cities) {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = `${c.name} · ${c.nameCn}`;
+    if (c.id === catalog.city.id) o.selected = true;
+    sel.appendChild(o);
+  }
+  $('city-hint').textContent = `Searching ${catalog.city.name}. Metro lines, districts and filters all change with the city.`;
+}
+
+/**
+ * The distance anchors this city offers. Hidden when there is only one — a select
+ * with a single option is noise — but the label and badge still name it.
+ */
+function renderLandmarks() {
+  const sel = $('landmark');
+  const marks = catalog.city.landmarks || [];
+  sel.textContent = '';
+  for (const l of marks) {
+    const o = document.createElement('option');
+    o.value = l.key;
+    o.textContent = l.name;
+    sel.appendChild(o);
+  }
+  $('landmark-field').hidden = marks.length < 2;
+  syncLandmark();
+}
+
+/** Keep the anchor's name in the badge, the label and the radius select in step. */
+function syncLandmark() {
+  const mark = currentLandmark();
+  $('landmark-badge').hidden = !mark;
+  if (!mark) {
+    // No anchor for this city: the radius filter has nothing to measure against.
+    $('maxFair').value = '';
+    $('maxFair').disabled = true;
+    $('maxFair-label').textContent = 'Max distance to landmark';
+    return;
+  }
+  $('maxFair').disabled = false;
+  $('maxFair-label').textContent = `Max distance to ${mark.name}`;
+  $('landmark-badge-text').textContent = `${mark.name} reference`;
+  $('landmark-badge').title = `Every listing shows its distance to ${mark.name} (${mark.nameCn})`;
+}
+
 /** Whole-line options. Only lines Tujia gives a 全线 filter id for are selectable. */
 function renderLines() {
   const sel = $('metroLine');
+  sel.textContent = '';
+  const any = document.createElement('option');
+  any.value = '';
+  any.textContent = 'Any line';
+  sel.appendChild(any);
   for (const line of catalog.metroLines) {
     if (!line.filterValue) continue;
     const o = document.createElement('option');
@@ -121,7 +199,7 @@ function renderStations() {
   sel.textContent = '';
   const any = document.createElement('option');
   any.value = '';
-  any.textContent = 'Anywhere in Guangzhou';
+  any.textContent = `Anywhere in ${catalog ? catalog.city.name : 'this city'}`;
   sel.appendChild(any);
 
   for (const line of catalog ? catalog.metroLines : []) {
@@ -152,6 +230,7 @@ function renderStations() {
 
 function renderSorts() {
   const sel = $('sort');
+  sel.textContent = '';
   for (const s of catalog.sortOptions) {
     const o = document.createElement('option');
     o.value = s.value;
@@ -163,6 +242,7 @@ function renderSorts() {
 
 function renderAmenities() {
   const host = $('amenity-groups');
+  host.textContent = ''; // the vocabulary is per city, so a reload replaces it wholesale
   // Most useful groups first for a foreign visitor.
   const priority = ['Special requirements', 'Facilities', 'Services', 'Neighbourhood'];
   const groups = [...catalog.amenityGroups].sort(
@@ -251,7 +331,7 @@ async function onSubmit(event) {
   const stationId = $('metroStation').value;
 
   const body = {
-    cityId: '45',
+    cityId: $('city').value || catalog?.city.id,
     checkIn: $('checkIn').value,
     checkOut: $('checkOut').value,
     guestCount: Number($('guestCount').value),
@@ -269,7 +349,9 @@ async function onSubmit(event) {
   } else if ($('metroLine').value) {
     body.metroLineId = $('metroLine').value;
   }
-  if ($('maxFair').value) body.maxDistanceToFairKm = Number($('maxFair').value);
+  const mark = currentLandmark();
+  if (mark) body.landmarkKey = mark.key;
+  if ($('maxFair').value) body.maxDistanceToLandmarkKm = Number($('maxFair').value);
 
   paging = { body, nextPageIndex: null, seen: new Set(), loading: false };
 
@@ -366,11 +448,19 @@ function render(data) {
   const sum = $('summary');
   sum.hidden = false;
   const parts = [`<strong>${data.total}</strong> shown`];
+  if (data.city) parts.push(esc(data.city.name));
   if (data.totalAvailable != null) parts.push(`${data.totalAvailable} match your filters`);
   if (data.bookableCount != null) parts.push(`${data.bookableCount} bookable for these dates`);
-  // The Canton Fair filter is applied locally, so say how much was searched to fill the page.
-  if (data.scanned != null) parts.push(`searched ${data.scanned} for distance to the fair`);
+  // The landmark radius is applied locally, so say how much was searched to fill the page.
+  if (data.scanned != null) {
+    parts.push(`searched ${data.scanned} for distance to ${esc(data.landmark?.name || 'the landmark')}`);
+  }
   if (data.cached) parts.push('cached');
+  // Tujia masks prices for logged-out sessions. Say so once, at the top, rather than
+  // leaving every card's range unexplained.
+  if (data.results.some((h) => h.price.masked)) {
+    parts.push('<span class="warn">prices approximate — session not logged in</span>');
+  }
   sum.innerHTML = parts.join(' <span class="sep">·</span> ');
 
   if (!data.results.length) {
@@ -385,16 +475,17 @@ function render(data) {
       syncLoadMore(data);
       return;
     }
-    if (data.scanned != null && !$('metroStation').value) {
-      // Distance to the fair is filtered locally over popularity-ranked results, so a
+    if (data.scanned != null && !$('metroStation').value && allStations.length) {
+      // Distance to the anchor is filtered locally over popularity-ranked results, so a
       // tight radius rarely lands. Anchoring the search on a nearby station works better.
+      const name = data.landmark?.name || 'the landmark';
       showStatus(
-        'No stays that close to the fair',
+        `No stays that close to ${name}`,
         `Searched ${data.scanned} listings and none were within ${$('maxFair').value} km. ` +
-          'Anchoring on a station near the fair works better — try Pazhou or Wanshengwei below.',
+          'Anchoring on a nearby station works better — try one of these.',
         false
       );
-      offerFairStations();
+      offerLandmarkStations();
     } else {
       showStatus(
         'No stays found',
@@ -479,22 +570,16 @@ function syncLoadMore(data, added) {
 }
 
 /**
- * Offer one-click shortcuts to the metro stations closest to the Canton Fair complex,
- * ranked using the same coordinates the catalog ships.
+ * Offer one-click shortcuts to the metro stations closest to the active anchor,
+ * ranked using the coordinates the catalog ships for both.
  */
-function offerFairStations() {
-  const FAIR = { lng: 113.36747, lat: 23.106647 }; // taxonomy id 5_23158498
-  const km = (a, b) => {
-    const R = 6371, rad = (d) => (d * Math.PI) / 180;
-    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
-    const s = Math.sin(dLat / 2) ** 2 +
-      Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(s));
-  };
+function offerLandmarkStations() {
+  const mark = currentLandmark();
+  if (!mark || !allStations.length) return;
 
   // Interchange stations appear once per line with different filter ids; keep the nearest.
   const byName = new Map();
-  for (const s of allStations.map((s) => ({ ...s, d: km(s, FAIR) }))) {
+  for (const s of allStations.map((s) => ({ ...s, d: kmBetween(s, mark) }))) {
     const prev = byName.get(s.en);
     if (!prev || s.d < prev.d) byName.set(s.en, s);
   }
@@ -502,7 +587,7 @@ function offerFairStations() {
 
   const box = document.createElement('div');
   box.className = 'suggest';
-  box.innerHTML = '<span>Stations near the fair:</span>';
+  box.innerHTML = `<span>Stations near ${esc(mark.name)}:</span>`;
   for (const s of nearest) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -565,7 +650,37 @@ function detailHref(h) {
   if (paging.body?.checkIn) q.set('checkIn', paging.body.checkIn);
   if (paging.body?.checkOut) q.set('checkOut', paging.body.checkOut);
   if (paging.body?.guestCount) q.set('guests', String(paging.body.guestCount));
+  // The detail endpoint resolves the city from the payload, but the anchor is the
+  // user's choice — carry it so the page measures the same distance the card did.
+  if (paging.body?.cityId) q.set('city', paging.body.cityId);
+  if (paging.body?.landmarkKey) q.set('landmark', paging.body.landmarkKey);
   return `/listing.html?${q}`;
+}
+
+/**
+ * The price corner of a card.
+ *
+ * On an anonymous Tujia session the figure comes back masked ("1??"), not withheld —
+ * each ? is one hidden digit, so the server turns it into a real range. Show that
+ * range rather than a fake precise number or a bare dash, and say why it is a range.
+ */
+function priceBlock(p) {
+  if (p.masked && p.fromEUR != null) {
+    return `<div>
+        <span class="eur">€${p.fromEUR}–€${p.toEUR}</span>
+        <span class="unit">/night</span>
+      </div>
+      <span class="cny masked" title="Tujia only reveals exact prices to logged-in users. The range is what its masked figure (¥${p.fromCNY}??) pins down.">¥${p.fromCNY}–${p.toCNY} · approx</span>`;
+  }
+  if (p.perNightEUR == null) {
+    return `<div><span class="eur">—</span></div><span class="cny masked">price unavailable</span>`;
+  }
+  return `<div>
+      ${p.originalEUR ? `<span class="eur was">€${p.originalEUR}</span>` : ''}
+      <span class="eur">€${p.perNightEUR}</span>
+      <span class="unit">/night</span>
+    </div>
+    <span class="cny">¥${p.perNightCNY} CNY</span>`;
 }
 
 function card(h) {
@@ -573,13 +688,15 @@ function card(h) {
   el.className = 'card';
 
   const img = h.images[0] || '';
-  const fair = h.location.distanceToCantonFairKm;
+  const landmarkKm = h.location.distanceToLandmarkKm;
   const anchor = h.location.distanceToSearchAnchorM;
 
   const facts = [];
   if (h.room.maxGuests) facts.push(`<span class="fact">${h.room.maxGuests} guests</span>`);
   if (h.room.bedrooms) facts.push(`<span class="fact">${h.room.bedrooms} bed${h.room.bedrooms > 1 ? 's' : ''}room</span>`);
-  if (fair != null) facts.push(`<span class="fact fair">${fair} km to Canton Fair</span>`);
+  if (landmarkKm != null && h.location.landmark) {
+    facts.push(`<span class="fact fair">${landmarkKm} km to ${esc(h.location.landmark)}</span>`);
+  }
   // Distance to the anchor station is only meaningful when the search had one.
   if (anchor != null && h.location.searchAnchor) {
     facts.push(
@@ -650,14 +767,7 @@ function card(h) {
       ${h.reviewHighlight ? `<p class="quote">${esc(h.reviewHighlight)}</p>` : ''}
       <div class="chips">${chips}</div>
       <div class="card-foot">
-        <div class="price">
-          <div>
-            ${h.price.originalEUR ? `<span class="eur was">€${h.price.originalEUR}</span>` : ''}
-            <span class="eur">€${h.price.perNightEUR}</span>
-            <span class="unit">/night</span>
-          </div>
-          <span class="cny">¥${h.price.perNightCNY} CNY</span>
-        </div>
+        <div class="price">${priceBlock(h.price)}</div>
         <a class="book" href="${esc(detailHref(h))}">Details →</a>
       </div>
     </div>`;

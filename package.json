@@ -10,7 +10,8 @@
     "catalog": "bun run scripts/generate-catalog.ts",
     "scraper": "bun run src/scraper-cli.ts",
     "scraper:headed": "HEADED=1 bun run src/scraper-cli.ts",
-    "mock": "bun run src/mocks/sample.ts"
+    "mock": "bun run src/mocks/sample.ts",
+    "session": "bun run scripts/mint-session.ts"
   },
   "dependencies": {
     "axios": "^1.7.0",

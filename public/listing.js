@@ -25,7 +25,27 @@ function fail(title, msg) {
      </div></div>`;
 }
 
+/**
+ * Result cards open this page in a new tab, so there is usually nothing to go "back"
+ * to — following the link would start a blank search rather than returning to one.
+ * Only offer going back when this tab actually has history; otherwise say "Search",
+ * which is what the link really does.
+ */
+function syncBackLink() {
+  const el = document.getElementById('back-link');
+  if (!el) return;
+  if (history.length > 1 && document.referrer.startsWith(location.origin)) {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      history.back();
+    });
+  } else {
+    el.textContent = 'Search ↗';
+  }
+}
+
 async function load() {
+  syncBackLink();
   if (!ID) return fail('No listing selected', 'This page needs an ?id= parameter.');
 
   const q = new URLSearchParams({ checkIn: CHECK_IN, checkOut: CHECK_OUT, guests: GUESTS });

@@ -11,7 +11,7 @@
  * report a "nearest station" 100 km away rather than none.
  */
 
-import { allStations, type Landmark } from '../catalog';
+import { allStations, type Landmark, type MetroLine } from '../catalog';
 
 const EARTH_RADIUS_KM = 6371;
 const toRad = (deg: number): number => (deg * Math.PI) / 180;
@@ -107,6 +107,58 @@ function stationsFor(cityId: string): IndexedStation[] {
 /** Average walking speed, km/h — used to turn distance into a legible number. */
 const WALK_KMH = 4.5;
 
+const walkMinutes = (km: number): number => Math.max(1, Math.ceil((km / WALK_KMH) * 60));
+
+/**
+ * Nearest station **on one specific line**, which is a different question from
+ * `findNearestMetro`.
+ *
+ * With a whole-line filter active, the globally nearest station is frequently on some
+ * other line — Guangzhou's Line 11 is a loop that interchanges with nearly everything —
+ * so leading with it makes a working Line 8 filter look broken. This answers "how far
+ * is this place from the corridor I actually asked for", which is both what the card
+ * should lead with and what `maxDistanceToMetroLineKm` filters on.
+ */
+export interface NearestOnLine {
+  station: string;
+  stationCn: string;
+  line: string;
+  lineLabel: string;
+  distanceKm: number;
+  walkMinutes: number;
+}
+
+export function findNearestOnLine(
+  line: MetroLine | null | undefined,
+  lng?: number,
+  lat?: number
+): NearestOnLine | null {
+  if (!line || typeof lng !== 'number' || typeof lat !== 'number' || (lng === 0 && lat === 0)) {
+    return null;
+  }
+
+  let best: (typeof line.stations)[number] | null = null;
+  let bestKm = Infinity;
+  for (const s of line.stations) {
+    if (!s.lng || !s.lat) continue;
+    const d = haversineKm({ lng, lat }, { lng: s.lng, lat: s.lat });
+    if (d < bestKm) {
+      bestKm = d;
+      best = s;
+    }
+  }
+  if (!best) return null;
+
+  return {
+    station: best.en,
+    stationCn: best.cn,
+    line: line.en,
+    lineLabel: line.label,
+    distanceKm: Math.round(bestKm * 100) / 100,
+    walkMinutes: walkMinutes(bestKm),
+  };
+}
+
 export function findNearestMetro(
   cityId: string,
   lng?: number,
@@ -138,6 +190,6 @@ export function findNearestMetro(
       return n(a) - n(b) || a.localeCompare(b);
     }),
     distanceKm: Math.round(bestKm * 100) / 100,
-    walkMinutes: Math.max(1, Math.ceil((bestKm / WALK_KMH) * 60)),
+    walkMinutes: walkMinutes(bestKm),
   };
 }

@@ -48,6 +48,7 @@ router.post('/', async (req: Request, res: Response) => {
     metroLng: req.body.metroLng,
     metroLat: req.body.metroLat,
     metroLineId: req.body.metroLineId,
+    maxDistanceToMetroLineKm: req.body.maxDistanceToMetroLineKm,
   };
 
   const cacheKey = JSON.stringify(params);
@@ -57,13 +58,48 @@ router.post('/', async (req: Request, res: Response) => {
     return;
   }
 
-  // Tujia has no condition for "distance to landmark X", so it can only be applied
-  // after mapping. Filtering a single 10-unit page would discard almost everything, so
-  // when that filter is active we walk pages until the page is full or the budget runs out.
-  const ctx = mapContext(params.cityId, params.landmarkKey);
-  const wantsLandmarkFilter = params.maxDistanceToLandmarkKm !== undefined && ctx.landmark !== null;
+  // Two filters Tujia has no condition for, so both can only be applied after mapping:
+  // distance to a landmark, and distance to the filtered metro line. (Tujia's own line
+  // filter is generous — it returns places 4 km out — so tightening it is a real need.)
+  // Filtering a single 10-unit page would discard almost everything, so when either is
+  // active we walk pages until the page is full or the budget runs out.
+  const ctx = mapContext(params.cityId, params.landmarkKey, params.metroLineId);
+  const landmarkKm = ctx.landmark ? params.maxDistanceToLandmarkKm : undefined;
+  // Only meaningful with a line filter; `metroStationId` beats `metroLineId` upstream,
+  // so ctx.line is null in that case and this correctly falls away.
+  const lineKm = ctx.line ? params.maxDistanceToMetroLineKm : undefined;
+
+  const keep = (h: HotelEn): boolean => {
+    if (landmarkKm !== undefined) {
+      const d = h.location.distanceToLandmarkKm;
+      if (d === null || d > landmarkKm) return false;
+    }
+    if (lineKm !== undefined) {
+      const d = h.location.nearestOnLine?.distanceKm;
+      if (d === undefined || d > lineKm) return false;
+    }
+    return true;
+  };
+
+  const wantsLocalFilter = landmarkKm !== undefined || lineKm !== undefined;
   const pageSize = params.pageSize ?? 10;
-  const MAX_PAGES = 8;
+
+  /**
+   * How the local-filter page walk is paced, all three numbers measured rather than
+   * guessed. An anonymous session is the constraint:
+   *
+   *   - it answers three back-to-back searches, then fails the fourth with 55004
+   *     ("not logged in") — the burst is what breaks it, not the session age;
+   *   - it tolerates `pageSize` up to 20, but refuses 30 outright;
+   *   - at ~2.5 s apart, four requests in a row are fine.
+   *
+   * So: ask for twice as much per request and make fewer of them. Five pages of 20
+   * scans 100 units where the old eight-of-ten scanned 80, in three fewer round trips.
+   */
+  const UPSTREAM_PAGE_SIZE = wantsLocalFilter ? Math.max(pageSize, 20) : pageSize;
+  const MAX_PAGES = 5;
+  const PAGE_GAP_MS = 1500;
+  const nap = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   try {
     const kept: HotelEn[] = [];
@@ -76,8 +112,20 @@ router.post('/', async (req: Request, res: Response) => {
     const firstPage = params.pageIndex ?? 0;
     let page = firstPage;
 
-    for (; pagesScanned < (wantsLandmarkFilter ? MAX_PAGES : 1); page++) {
-      const raw = await client.search({ ...params, pageIndex: page });
+    for (; pagesScanned < (wantsLocalFilter ? MAX_PAGES : 1); page++) {
+      if (pagesScanned) await nap(PAGE_GAP_MS);
+
+      let raw: any;
+      try {
+        raw = await client.search({ ...params, pageIndex: page, pageSize: UPSTREAM_PAGE_SIZE });
+      } catch (err) {
+        // A page that fails *mid-walk* should not throw away the results already
+        // collected — return them and leave hasMore true so the client can retry from
+        // the cursor. Only a failure on the very first page is a failed search.
+        if (pagesScanned === 0) throw err;
+        console.warn(`[search] page ${page} failed mid-walk, returning ${kept.length} kept:`, (err as any).message);
+        break;
+      }
       pagesScanned++;
 
       // Listings live in `data.items` on search/v2/searchhouse/bnb.
@@ -90,18 +138,12 @@ router.post('/', async (req: Request, res: Response) => {
       // `conditions` payload, so we do NOT re-filter on them here — the tag vocabulary
       // in the response differs from the filter vocabulary and would wrongly drop rows.
       const mapped: HotelEn[] = items.map((item: any) => mapToEnglish(item, ctx));
-      kept.push(
-        ...(wantsLandmarkFilter
-          ? mapped.filter(
-              (h) =>
-                h.location.distanceToLandmarkKm !== null &&
-                h.location.distanceToLandmarkKm <= params.maxDistanceToLandmarkKm!
-            )
-          : mapped)
-      );
+      kept.push(...(wantsLocalFilter ? mapped.filter(keep) : mapped));
 
-      if (items.length < pageSize) {
-        exhausted = true; // upstream ran out of listings
+      // Compare against what we actually asked upstream for, not the client's page
+      // size — a short page is the only signal that Tujia has run out.
+      if (items.length < UPSTREAM_PAGE_SIZE) {
+        exhausted = true;
         page++;
         break;
       }
@@ -126,8 +168,8 @@ router.post('/', async (req: Request, res: Response) => {
       // local-filter scan can burn its page budget in a sparse stretch and keep zero
       // while plenty remains further on. Saying "that's all" there would be wrong.
       hasMore: !exhausted,
-      scanned: wantsLandmarkFilter ? scanned : undefined,
-      pagesScanned: wantsLandmarkFilter ? pagesScanned : undefined,
+      scanned: wantsLocalFilter ? scanned : undefined,
+      pagesScanned: wantsLocalFilter ? pagesScanned : undefined,
       cached: false,
       city: { id: city.id, name: city.name, nameCn: city.nameCn },
       landmark: ctx.landmark && { key: ctx.landmark.key, name: ctx.landmark.name },

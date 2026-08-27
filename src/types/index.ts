@@ -38,6 +38,13 @@ export interface SearchRequest {
    * `metroStationId` is set — a single station is the more specific request.
    */
   metroLineId?: string;
+  /**
+   * Tighten the whole-line filter: keep only listings within this many km of the
+   * nearest station **on that line**. Tujia's own line filter is generous (it returns
+   * places 4 km out), so this is applied locally, the same way
+   * `maxDistanceToLandmarkKm` is. Ignored without `metroLineId`.
+   */
+  maxDistanceToMetroLineKm?: number;
 }
 
 export interface NearestMetroEn {
@@ -45,6 +52,17 @@ export interface NearestMetroEn {
   stationCn: string;
   /** Every line serving the station — interchanges list more than one. */
   lines: string[];
+  distanceKm: number;
+  walkMinutes: number;
+}
+
+export interface NearestOnLineEn {
+  station: string;
+  stationCn: string;
+  /** Short badge form, e.g. "Line 8". */
+  line: string;
+  /** Unique picker label, e.g. "Line 1 · Luobao". */
+  lineLabel: string;
   distanceKm: number;
   walkMinutes: number;
 }
@@ -61,6 +79,13 @@ export interface LocationEn {
    * Null for a city with no metro network.
    */
   nearestMetro: NearestMetroEn | null;
+  /**
+   * Nearest station on the line the search was filtered by, and how far. Null when no
+   * whole-line filter was active. Different from `nearestMetro`, which is the globally
+   * nearest and is often on some other line — the card leads with this one so a working
+   * line filter does not look broken.
+   */
+  nearestOnLine: NearestOnLineEn | null;
   /**
    * Real haversine distance to the city's distance anchor, in km. Null if the unit has
    * no coordinates, or the city has no landmark.

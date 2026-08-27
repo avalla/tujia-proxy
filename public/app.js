@@ -177,6 +177,12 @@ function syncLocationHint() {
   const station = $('metroStation');
   const hint = $('location-hint');
 
+  // The line-distance filter only means anything with a line selected, so it appears
+  // and disappears with one rather than sitting there inert.
+  const lineActive = !station.value && Boolean(line.value);
+  $('lineDistance-field').hidden = !lineActive;
+  if (!lineActive) $('maxLineKm').value = '';
+
   if (station.value) {
     line.disabled = true;
     const name = station.selectedOptions[0]?.textContent || 'a station';
@@ -184,7 +190,9 @@ function syncLocationHint() {
   } else if (line.value) {
     line.disabled = false;
     const label = line.selectedOptions[0]?.textContent || 'this line';
-    hint.textContent = `Searching along ${label.split(' · ')[0]}.`;
+    hint.textContent =
+      `Searching along ${label.split(' · ')[0]}. Tujia's own line filter is generous — ` +
+      'tighten it below if you want to be genuinely walkable to it.';
   } else {
     line.disabled = false;
     hint.textContent = 'Pick a line for a whole corridor, or a single station to narrow it down.';
@@ -348,6 +356,7 @@ async function onSubmit(event) {
     body.metroLat = Number(stationOpt.dataset.lat);
   } else if ($('metroLine').value) {
     body.metroLineId = $('metroLine').value;
+    if ($('maxLineKm').value) body.maxDistanceToMetroLineKm = Number($('maxLineKm').value);
   }
   const mark = currentLandmark();
   if (mark) body.landmarkKey = mark.key;
@@ -451,9 +460,13 @@ function render(data) {
   if (data.city) parts.push(esc(data.city.name));
   if (data.totalAvailable != null) parts.push(`${data.totalAvailable} match your filters`);
   if (data.bookableCount != null) parts.push(`${data.bookableCount} bookable for these dates`);
-  // The landmark radius is applied locally, so say how much was searched to fill the page.
+  // Both radius filters are applied locally, so say how much had to be searched to
+  // fill the page — and name the filter that actually caused it, not just the landmark.
   if (data.scanned != null) {
-    parts.push(`searched ${data.scanned} for distance to ${esc(data.landmark?.name || 'the landmark')}`);
+    const why = [];
+    if (paging.body?.maxDistanceToMetroLineKm) why.push('distance to the line');
+    if (paging.body?.maxDistanceToLandmarkKm) why.push(`distance to ${data.landmark?.name || 'the landmark'}`);
+    parts.push(esc(`searched ${data.scanned} for ${why.join(' and ') || 'your distance limits'}`));
   }
   if (data.cached) parts.push('cached');
   // Tujia masks prices for logged-out sessions. Say so once, at the top, rather than
@@ -464,24 +477,33 @@ function render(data) {
   sum.innerHTML = parts.join(' <span class="sep">·</span> ');
 
   if (!data.results.length) {
+    // Whichever local radius is active is the one to name in the empty state; saying
+    // "not within N km of the landmark" when the line filter emptied the page is just
+    // misleading.
+    const lineKm = paging.body?.maxDistanceToMetroLineKm;
+    const landmarkKm = paging.body?.maxDistanceToLandmarkKm;
+    const limit = lineKm
+      ? `${lineKm} km of the line`
+      : `${landmarkKm} km of ${data.landmark?.name || 'the landmark'}`;
+
     if (data.scanned != null && data.hasMore) {
       // The scan budget ran out in a sparse stretch — there is more to look through.
       showStatus(
         'Nothing in this batch',
-        `Searched ${data.scanned} listings without a match within ${$('maxFair').value} km. ` +
+        `Searched ${data.scanned} listings without a match within ${limit}. ` +
           'Keep looking, or widen the radius.',
         false
       );
       syncLoadMore(data);
       return;
     }
-    if (data.scanned != null && !$('metroStation').value && allStations.length) {
+    if (data.scanned != null && landmarkKm && !lineKm && !$('metroStation').value && allStations.length) {
       // Distance to the anchor is filtered locally over popularity-ranked results, so a
       // tight radius rarely lands. Anchoring the search on a nearby station works better.
       const name = data.landmark?.name || 'the landmark';
       showStatus(
         `No stays that close to ${name}`,
-        `Searched ${data.scanned} listings and none were within ${$('maxFair').value} km. ` +
+        `Searched ${data.scanned} listings and none were within ${landmarkKm} km. ` +
           'Anchoring on a nearby station works better — try one of these.',
         false
       );
@@ -616,34 +638,6 @@ function kmBetween(a, b) {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-/**
- * Nearest station on the line the current results were filtered by, or null when no
- * line filter is active. Computed here rather than server-side because it depends on
- * the query, and the browser already holds every station's coordinates.
- */
-function nearestOnFilteredLine(h) {
-  const lineId = paging.body?.metroLineId;
-  if (!lineId || h.location.lng == null) return null;
-
-  const line = catalog?.metroLines.find((l) => l.filterValue === lineId);
-  if (!line) return null;
-
-  let best = null, bestKm = Infinity;
-  for (const s of line.stations) {
-    if (!s.lng && !s.lat) continue;
-    const d = kmBetween({ lng: h.location.lng, lat: h.location.lat }, s);
-    if (d < bestKm) { bestKm = d; best = s; }
-  }
-  if (!best) return null;
-
-  return {
-    station: best.en,
-    line: line.en,
-    distanceKm: Math.round(bestKm * 100) / 100,
-    walkMinutes: Math.max(1, Math.ceil((bestKm / 4.5) * 60)),
-  };
-}
-
 /** Link to our translated detail page, carrying the stay so prices stay consistent. */
 function detailHref(h) {
   const q = new URLSearchParams({ id: h.id });
@@ -712,7 +706,7 @@ function card(h) {
   // though it is accurate. Show the corridor the user asked for first, and the truly
   // nearest station underneath when it differs.
   const m = h.location.nearestMetro;
-  const onLine = nearestOnFilteredLine(h);
+  const onLine = h.location.nearestOnLine;
   const fmt = (km) => (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
 
   let metroRow = '';
@@ -768,7 +762,7 @@ function card(h) {
       <div class="chips">${chips}</div>
       <div class="card-foot">
         <div class="price">${priceBlock(h.price)}</div>
-        <a class="book" href="${esc(detailHref(h))}">Details →</a>
+        <a class="book" href="${esc(detailHref(h))}" target="_blank" rel="noopener">Details ↗</a>
       </div>
     </div>`;
   return el;

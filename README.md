@@ -43,7 +43,8 @@ opens a visible browser if you have a Chinese number to receive the SMS.
   what the place *lacks*), house rules, the cancellation timeline with dates converted,
   deposit terms, host stats and review sub-scores
 - **Filter by a whole metro line** ("everything along Line 8"), not just a single station —
-  using Tujia's own line filter, so it paginates properly. Branches are listed separately
+  using Tujia's own line filter, so it paginates properly, **with a distance cap** on top
+  because Tujia's "near" stretches to nearly 4 km. Branches are listed separately
   (`Line 3 · Tiyuxilu ↔ Jichangbei`) because they really are different corridors
 - **Nearest metro station and line** on every listing, with walking distance and time —
   computed from the unit's own coordinates against that city's whole network, so it's the
@@ -96,6 +97,11 @@ it for the city's default.
 To search a whole metro line, send `metroLineId` with a `filterValue` from
 `/api/v1/filters` → `metroLines[]` (e.g. `"7_268250"` for Line 8). Send at most one, and
 note that `metroStationId` takes precedence — Tujia honours a single geo condition.
+
+Tujia's idea of "near a line" is loose — on Shenzhen's Line 11 it returns places 3.4–3.8 km
+away. Add `maxDistanceToMetroLineKm` to tighten it; at `1.5` the same query comes back with
+listings 0.2–1.5 km out. Every result carries `location.nearestOnLine` (station, line,
+distance, walking time) whenever a line filter is active.
 
 ### Pagination
 

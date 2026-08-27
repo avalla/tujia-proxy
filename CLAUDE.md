@@ -127,13 +127,22 @@ Three rules, each learned the hard way:
 
 **Line naming is not uniform across cities.** Guangzhou numbers lines plainly (`1号线`) and marks branches with `支线`. Shenzhen names most of its lines after the corridor they run — `1号罗宝线`, `3号龙岗线`, `2号蛇口线` — which the `号线` pattern does not match; without the second pattern in `lineName()` those romanize to unreadable blobs like `"1haoluobao Line"`. The badge stays `Line 1` either way and the qualifier only widens the picker label (`Line 1 · Luobao`), so a card badge is comparable across cities.
 
-**UI caveat worth preserving:** with a line filter active, the card leads with the nearest station *on that line*, not the globally nearest. The globally nearest is often on Line 11 (a loop interchanging with nearly everything), so showing it made a working Line 8 filter look broken — 10 cards, only 2 badged "Line 8". The true nearest is kept as a muted second line. That calculation lives in `nearestOnFilteredLine()` in `app.js`, client-side because it depends on the query.
+**UI caveat worth preserving:** with a line filter active, the card leads with the nearest station *on that line*, not the globally nearest. The globally nearest is often on Line 11 (a loop interchanging with nearly everything), so showing it made a working Line 8 filter look broken — 10 cards, only 2 badged "Line 8". The true nearest is kept as a muted second line.
+
+That calculation is `findNearestOnLine()` in `utils/geo.ts` and lands on every result as `location.nearestOnLine`. It used to be `nearestOnFilteredLine()` in `app.js`, client-side "because it depends on the query" — but the server builds the query, so it knows the line too, and `maxDistanceToMetroLineKm` has to filter on the same number. Two implementations of one distance would eventually disagree; there is now one.
+
+### `maxDistanceToMetroLineKm`
+
+Tujia's whole-line filter is **generous**: measured on Shenzhen's Line 11, the listings it returns sit 3.4–3.8 km from the line. That is "near" by its reckoning and useless by a traveller's. This filter tightens it locally, the same way `maxDistanceToLandmarkKm` does, and at 1.5 km the same query returns places 0.2–1.5 km out.
+
+It needs `metroLineId` and is ignored without one — `metroStationId` beats `metroLineId` upstream, so `ctx.line` is null in that case and the filter correctly falls away.
 
 ## Pagination
 
 Tujia honours `pageIndex`/`pageSize` (verified: consecutive pages return disjoint id sets; `pageSize` 5/20/30 all respected), but two things make naive paging wrong:
 
-- **The client must not compute `pageIndex + 1`.** When `maxDistanceToLandmarkKm` is set, the server walks several upstream pages per response to fill one. `/api/v1/search` therefore returns a **`nextPageIndex` cursor** plus `hasMore`; echo the cursor back. Measured jumps: `0 → 4 → 9 → 17`.
+- **The client must not compute `pageIndex + 1`.** When `maxDistanceToLandmarkKm` or `maxDistanceToMetroLineKm` is set, the server walks several upstream pages per response to fill one. `/api/v1/search` therefore returns a **`nextPageIndex` cursor** plus `hasMore`; echo the cursor back. Measured jumps: `0 → 4 → 9 → 17`.
+- **The cursor counts upstream pages, which are bigger than yours.** While a local filter is active the walk asks Tujia for `pageSize` 20 regardless of what the client wanted, so `nextPageIndex` is in units of 20. It stays consistent because the same filter is still active on the follow-up request.
 - **`hasMore` keys on upstream exhaustion, not on whether the response kept anything.** A local-filter scan can burn its 8-page budget in a sparse stretch and keep zero results while thousands remain. Gating on `results.length > 0` would wrongly say "that's all".
 
 `nextPageIndex` is `null` only when an upstream page returns fewer than `pageSize` items. Page 400 returns `total: 0, hasMore: false, nextPageIndex: null`.
@@ -278,6 +287,21 @@ So `Origin`, `Sec-Fetch-*` and the query-string parameters are all harmless; the
 `bun run session` mints an **anonymous** session with Playwright and writes it to `cookies.txt`. That is enough for everything: search, `conditions/fetch`, and listing detail. Tujia's login is SMS-only and only reaches Chinese numbers, so this is the practical path.
 
 What a login actually buys is **member pricing** — Tujia's "登录后解锁超低价 / 最高85折" strip, up to ~15% off. Run `bun run session -- --login` for a visible browser if you have a working number.
+
+### What an anonymous session will and will not do
+
+Three limits, all measured, all of which the page walk had to be reshaped around:
+
+| | anonymous session |
+|---|---|
+| back-to-back searches | **3**, then `55004` on the fourth |
+| same, ~2.5 s apart | fine |
+| `pageSize` | 20 works, **30 is refused outright** |
+| pagination | any `pageIndex` is fine |
+
+So `routes/search.ts` asks for 20 per upstream page and walks at most 5 of them, 1.5 s apart — 100 units scanned in 5 requests where the old 8×10 scanned 80 in 8. A page that fails *mid-walk* no longer fails the whole search: it returns what it collected with `hasMore` still true, so the client can retry from the cursor.
+
+`55004` here is not "your session died", it is "you asked too fast". Re-minting will not help; slowing down will.
 
 ### Anonymous sessions get masked prices, not missing ones
 

@@ -80,6 +80,17 @@
             <option value="">Any line</option>
           </select>
         </label>
+        <label class="field" id="lineDistance-field" hidden>
+          <span>Max distance from that line</span>
+          <select id="maxLineKm">
+            <option value="">Anywhere Tujia calls "near"</option>
+            <option value="0.5">Within 500 m</option>
+            <option value="1">Within 1 km</option>
+            <option value="1.5">Within 1.5 km</option>
+            <option value="2">Within 2 km</option>
+            <option value="3">Within 3 km</option>
+          </select>
+        </label>
         <label class="field">
           <span>Near metro station</span>
           <input type="search" id="station-filter" placeholder="Type to filter stations…" autocomplete="off">

@@ -7,24 +7,43 @@ import {
   Occupancy,
   Layout,
 } from '../utils/translator';
-import { distanceToLandmarkKm, findNearestMetro } from '../utils/geo';
+import { distanceToLandmarkKm, findNearestMetro, findNearestOnLine } from '../utils/geo';
 import { cnyToEur, cnyToEurOrNull, parsePrice } from '../utils/currency';
-import { cityOrDefault, resolveLandmark, DEFAULT_CITY_ID, type Landmark } from '../catalog';
+import {
+  cityOrDefault,
+  resolveLandmark,
+  getCatalog,
+  DEFAULT_CITY_ID,
+  type Landmark,
+  type MetroLine,
+} from '../catalog';
 
 /**
- * Which city the results belong to, and which anchor distances are measured from.
- * Passed in rather than sniffed off each item: the search request already knows,
- * and the per-item `cityName` is Chinese and occasionally absent.
+ * Which city the results belong to, which anchor distances are measured from, and
+ * which line (if any) the search was filtered by. Passed in rather than sniffed off
+ * each item: the search request already knows, and the per-item `cityName` is Chinese
+ * and occasionally absent.
  */
 export interface MapContext {
   cityId: string;
   landmark: Landmark | null;
+  line: MetroLine | null;
 }
 
-/** Build a mapping context from a cityId and an optional landmark key. */
-export function mapContext(cityId: string, landmarkKey?: string): MapContext {
+/** Build a mapping context from a cityId and the query's optional anchors. */
+export function mapContext(
+  cityId: string,
+  landmarkKey?: string,
+  metroLineId?: string
+): MapContext {
   const city = cityOrDefault(cityId);
-  return { cityId: city.id, landmark: resolveLandmark(city, landmarkKey) };
+  // Looked up in this city's catalog only — a line id from another city is not a
+  // meaningful anchor for these results even though the ids are globally unique.
+  const line =
+    (metroLineId &&
+      getCatalog(city.id)?.metroLines.find((l) => l.filterValue === metroLineId)) ||
+    null;
+  return { cityId: city.id, landmark: resolveLandmark(city, landmarkKey), line };
 }
 
 /** One entry of `unitSummeries` on a search result item. */
@@ -122,6 +141,7 @@ export function mapToEnglish(raw: any, ctx: MapContext = mapContext(DEFAULT_CITY
             }
           : null;
       })(),
+      nearestOnLine: findNearestOnLine(ctx.line, lng ?? undefined, lat ?? undefined),
       distanceToLandmarkKm: distanceToLandmarkKm(ctx.landmark, lng ?? undefined, lat ?? undefined),
       landmark: ctx.landmark?.name ?? null,
       distanceToSearchAnchorM: typeof raw.distance === 'number' ? raw.distance : null,

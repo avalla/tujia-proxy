@@ -282,11 +282,19 @@ The scraper solves the same problem properly: `storage/tujia-state.json` (gitign
 
 So `Origin`, `Sec-Fetch-*` and the query-string parameters are all harmless; the UA is the whole story. The earlier suspects were ruled out first: `curl` on the page returns the SPA shell (not network), Playwright gets `errcode 0` from the same IP (not the IP or Tujia), changing IP via VPN changes nothing (not the IP again), and axios / curl / in-page fetch all succeed with browser cookies (not the client, TLS fingerprint or request shape).
 
-### No login required
+### No login required, and the server keeps its own session alive
 
-`bun run session` mints an **anonymous** session with Playwright and writes it to `cookies.txt`. That is enough for everything: search, `conditions/fetch`, and listing detail. Tujia's login is SMS-only and only reaches Chinese numbers, so this is the practical path.
+`mintSession()` in `services/sessionMinter.ts` drives m.tujia.com once with Playwright and saves the session it is handed. That is enough for everything: search, `conditions/fetch`, and listing detail. Tujia's login is SMS-only and only reaches Chinese numbers, so this is the practical path. `bun run session` is the manual entry point; `bun run session -- --login` opens a visible browser if you do have a number.
 
-What a login actually buys is **member pricing** — Tujia's "登录后解锁超低价 / 最高85折" strip, up to ~15% off. Run `bun run session -- --login` for a visible browser if you have a working number.
+What a login buys is **member pricing** — Tujia's "登录后解锁超低价 / 最高85折" strip, up to ~15% off.
+
+Sessions expire after a few hours, so `startServer()` calls `startSessionRefresh()`: mint at startup, then every `TUJIA_SESSION_REFRESH_MINUTES` (default 30, `0` disables). Three guards, each there for a reason:
+
+- **A logged-in session is never overwritten.** Replacing one with an anonymous session would silently drop member pricing, and nothing can mint a logged-in one unattended.
+- **A session younger than the interval is left alone.** `bun run dev` runs under `--watch`, so without this every file save would launch a browser.
+- **A failed refresh is not fatal.** The current session usually still works; a browser that will not launch is no reason to take the API down.
+
+Note the failure mode this does *not* fix: `55004` mid-search is usually "you asked too fast", not an expired session — re-minting will not help there. See the table below.
 
 ### What an anonymous session will and will not do
 

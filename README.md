@@ -20,10 +20,14 @@ bun run dev
 
 Then open **http://localhost:3000**.
 
-Tujia's endpoints need a browser session, but **not a login** — `bun run session` drives a
-real browser once and saves the anonymous session it gets. Search, filters and detail pages
-all work with it. `cookies.txt` is gitignored; it is a real session, so keep it out of commits.
-`GET /api` tells you whether one was loaded.
+Tujia's endpoints need a browser session, but **not a login** — the server mints one for
+itself at startup and refreshes it every 30 minutes, so `cookies.txt` stays valid without you
+touching it. `bun run session` does the same by hand when the server is not running.
+`cookies.txt` is gitignored; it is a real session, so keep it out of commits. `GET /api` tells
+you whether one was loaded and whether it is anonymous.
+
+Set `TUJIA_SESSION_REFRESH_MINUTES=0` to turn the refresh off — worth doing if you keep a
+logged-in session by hand, though a logged-in session is never overwritten either way.
 
 A login only unlocks Tujia's member pricing (up to ~15% off). Without it, prices come back
 **masked** — Tujia sends `"1??"` rather than a number — so the UI shows the range that mask

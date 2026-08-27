@@ -1,24 +1,21 @@
 #!/usr/bin/env bun
 /**
- * Mint a Tujia session by loading the real mobile site once in Playwright, and write
- * it to `cookies.txt` in the format cookieJar.ts reads.
+ * Mint a Tujia session into `cookies.txt`, by hand.
  *
- *   bun run session                    # writes ./cookies.txt
+ *   bun run session                    # anonymous, headless
  *   bun run session -- --out /tmp/x    # somewhere else
- *   bun run session -- --login         # opens a visible browser and waits for you
+ *   bun run session -- --login         # visible browser, waits for you to log in
  *
- * The default is ANONYMOUS — no login. That is enough for everything this proxy
- * does: search, the filter taxonomy, and listing detail all answer without one.
- * A logged-in session additionally unlocks Tujia's member pricing (the
- * "登录后解锁超低价 / 最高85折" strip on the site — up to ~15% off), so prices from an
- * anonymous session are the public ones. Nothing breaks without it.
+ * The server does this for itself every 30 minutes (see `startSessionRefresh`), so
+ * reach for this when the server is not running, when you want a logged-in session,
+ * or when you have disabled the automatic refresh.
  *
- * Two things this exists to avoid:
- *   - copying cookies out of DevTools by hand every time a session dies
- *   - needing to receive Tujia's login SMS, which only reaches Chinese numbers
+ * Anonymous is enough for everything the proxy does: search, the filter taxonomy and
+ * listing detail all answer without a login. What a login buys is Tujia's member
+ * pricing — without it, prices come back masked ("1??") and the UI shows a range.
  */
-import { chromium, devices } from 'playwright';
-import { writeFileSync } from 'fs';
+import { mintSession } from '../src/services/sessionMinter';
+import { CONFIG } from '../src/config';
 
 const args = process.argv.slice(2);
 const arg = (flag: string, fallback: string): string => {
@@ -26,58 +23,25 @@ const arg = (flag: string, fallback: string): string => {
   return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
 };
 
-const out = arg('--out', './cookies.txt');
+const out = arg('--out', CONFIG.COOKIES_FILE);
 const cityId = arg('--city', '45');
 const wantLogin = args.includes('--login');
 
-const browser = await chromium.launch({ headless: !wantLogin });
-// A mobile context, deliberately: m.tujia.com mints mobile sessions, and TujiaClient
-// sends a matching mobile User-Agent. Mixing the two gets errcode 55999.
-const ctx = await browser.newContext(devices['iPhone 13']);
-const page = await ctx.newPage();
-
-let searchOk = false;
-page.on('response', async (res) => {
-  if (!res.url().includes('searchhouse')) return;
-  try {
-    if (((await res.json())?.errcode ?? 0) === 0) searchOk = true;
-  } catch {
-    /* not JSON */
-  }
-});
+if (wantLogin) {
+  console.log('[*] opening a visible browser — log in, then close it to save the session.');
+  console.log('    (Tujia only sends its login SMS to Chinese numbers.)');
+}
 
 console.log(`[*] loading m.tujia.com/hotel_city${cityId}/ …`);
-await page.goto(`https://m.tujia.com/hotel_city${cityId}/`, {
-  waitUntil: 'domcontentloaded',
-  timeout: 45000,
-});
-// Wait for the page's own search XHR: the session only picks up its full cookie set
-// once Tujia's JS has run a request, and a half-formed one is not worth writing.
-await page.waitForTimeout(12000);
-
-if (wantLogin) {
-  console.log('\n[!] Log in in the browser window, then press Enter here.');
-  await new Promise<void>((resolve) => process.stdin.once('data', () => resolve()));
-}
-
-const cookies = await ctx.cookies();
-await browser.close();
-
-if (!cookies.length) {
-  console.error('✗ no cookies came back — did the page fail to load?');
-  process.exit(1);
-}
-
-const loggedIn = cookies.some((c) => c.name === 'tujia.com_PortalContext_UserToken');
-writeFileSync(
+const r = await mintSession({
   out,
-  [
-    `# Minted by \`bun run session\` — ${loggedIn ? 'logged in' : 'anonymous'}.`,
-    '# Real session data: gitignored, never commit it.',
-    ...cookies.map((c) => `${c.name}=${c.value}`),
-  ].join('\n') + '\n'
-);
+  cityId,
+  headless: !wantLogin,
+  // A visible login needs time to type a code in; headless just needs the page's own
+  // search XHR to land, which fills out the cookie set.
+  wait: wantLogin ? 240_000 : 12_000,
+});
 
-console.log(`[✓] wrote ${cookies.length} cookies to ${out}`);
-console.log(`    logged in: ${loggedIn ? 'yes' : 'no (member pricing not available)'}`);
-console.log(`    page's own search succeeded: ${searchOk ? 'yes' : 'no — session may be weak'}`);
+console.log(`[✓] wrote ${r.cookieCount} cookies to ${r.file}`);
+console.log(`    logged in: ${r.loggedIn ? 'yes' : 'no (member pricing not available)'}`);
+console.log(`    page's own search succeeded: ${r.searchOk ? 'yes' : 'no — session may be weak'}`);

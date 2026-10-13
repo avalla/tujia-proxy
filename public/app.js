@@ -547,7 +547,10 @@ function appendResults(data) {
   syncLoadMore(data, added);
 }
 
+let scrollObserver = null;
+
 function removeLoadMore() {
+  scrollObserver?.disconnect();
   $('load-more-wrap')?.remove();
 }
 
@@ -589,6 +592,21 @@ function syncLoadMore(data, added) {
 
   wrap.append(btn, note);
   $('results-end').appendChild(wrap);
+
+  // Infinite scroll: fetch when the control nears the viewport. The button stays as the
+  // fallback, and a page that added nothing does not auto-fire again, or an all-duplicate
+  // page would loop forever.
+  if (added !== 0 && 'IntersectionObserver' in window) {
+    scrollObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        scrollObserver.disconnect();
+        loadMore();
+      },
+      { rootMargin: '600px 0px' }
+    );
+    scrollObserver.observe(wrap);
+  }
 }
 
 /**

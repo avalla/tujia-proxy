@@ -10,6 +10,7 @@ output/
 
 # Live Tujia session — never commit. Start from cookies.example.txt.
 cookies.txt
+cookies.*.bak
 
 # Sniffed reference requests: these carry a real logged-in session inline.
 requests.http

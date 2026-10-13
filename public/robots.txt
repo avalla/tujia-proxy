@@ -1,0 +1,5 @@
+# This is an unofficial English proxy over Tujia's own listings. The content is
+# theirs, it is fetched live through a shared session, and every crawl burns a
+# quota a real visitor needs. Nothing here should be indexed.
+User-agent: *
+Disallow: /

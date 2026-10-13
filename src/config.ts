@@ -3,6 +3,12 @@ dotenv.config();
 
 export const CONFIG = {
   PORT: parseInt(process.env.PORT || '3000', 10),
+  /**
+   * Interface to bind. Defaults to loopback: behind a reverse proxy the app must not
+   * be reachable directly, or nginx's rules (TLS, rate limits) are trivially bypassed.
+   * Set `HOST=0.0.0.0` when nothing fronts it — a container, or local network access.
+   */
+  HOST: process.env.HOST || '127.0.0.1',
   TUJIA_API_URL: process.env.TUJIA_API_URL || 'https://m.tujia.com',
   CACHE_TTL: parseInt(process.env.CACHE_TTL_SECONDS || '300', 10),
   /** Path to the gitignored Tujia session file. See src/services/cookieJar.ts. */

@@ -30,8 +30,8 @@ export function createServer() {
 
 export function startServer() {
   const app = createServer();
-  app.listen(CONFIG.PORT, () => {
-    console.log(`🚀 Tujia Proxy EN on http://localhost:${CONFIG.PORT}`);
+  app.listen(CONFIG.PORT, CONFIG.HOST, () => {
+    console.log(`🚀 Tujia Proxy EN on http://${CONFIG.HOST}:${CONFIG.PORT}`);
 
     // Tujia sessions expire after a few hours, and there is no way to renew one
     // except by loading the site again — so the server does that for itself rather

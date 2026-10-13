@@ -25,6 +25,7 @@ let paging = { body: null, nextPageIndex: null, seen: new Set(), loading: false 
 async function boot() {
   populateGuests();
   populateBedrooms();
+  setDefaultDates();
   updateNights();
   updatePriceHint();
 
@@ -100,6 +101,16 @@ function populateGuests() {
     if (n === 2) o.selected = true;
     sel.appendChild(o);
   }
+}
+
+/** Default stay: today → today + 7 nights, in the visitor's own calendar day. */
+function setDefaultDates() {
+  const iso = (d) => d.toLocaleDateString('sv'); // sv-SE formats as YYYY-MM-DD
+  const today = new Date();
+  const out = new Date(today);
+  out.setDate(out.getDate() + 7);
+  $('checkIn').value = iso(today);
+  $('checkOut').value = iso(out);
 }
 
 function populateBedrooms() {

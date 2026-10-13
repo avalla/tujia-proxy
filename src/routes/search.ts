@@ -9,6 +9,15 @@ import { findCity, CITIES, DEFAULT_CITY_ID, hasCatalog } from '../catalog';
 const router = Router();
 const client = new TujiaClient();
 
+/** Default stay when the caller sends no dates: today → today + 7 nights. */
+function defaultStay(): { checkIn: string; checkOut: string } {
+  const iso = (d: Date) => d.toLocaleDateString('sv');
+  const today = new Date();
+  const out = new Date(today);
+  out.setDate(out.getDate() + 7);
+  return { checkIn: iso(today), checkOut: iso(out) };
+}
+
 router.post('/', async (req: Request, res: Response) => {
   // An unknown cityId is rejected rather than silently searched: Tujia would happily
   // answer for a city we have no metro catalog or district vocabulary for, and every
@@ -25,8 +34,8 @@ router.post('/', async (req: Request, res: Response) => {
 
   const params: SearchRequest = {
     cityId: city.id,
-    checkIn: req.body.checkIn || '2026-10-10',
-    checkOut: req.body.checkOut || '2026-11-05',
+    checkIn: req.body.checkIn || defaultStay().checkIn,
+    checkOut: req.body.checkOut || defaultStay().checkOut,
     pageIndex: req.body.pageIndex ?? 0,
     pageSize: req.body.pageSize ?? 10,
     priceMin: req.body.priceMin || 0,

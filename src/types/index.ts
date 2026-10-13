@@ -9,6 +9,8 @@ export interface SearchRequest {
   district?: string;
   roomCount?: number;
   guestCount?: number;
+  /** Bedroom count filter (1..5); omitted or 0 means any. Type 6, conditionType 0. */
+  bedrooms?: number;
   /** Arbitrary filter values from the catalog, e.g. ["237", "2301", "201"]. */
   amenities?: string[];
   /** Sort condition value from the catalog; "1" = most popular. */

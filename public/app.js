@@ -24,6 +24,7 @@ let paging = { body: null, nextPageIndex: null, seen: new Set(), loading: false 
 
 async function boot() {
   populateGuests();
+  populateBedrooms();
   updateNights();
   updatePriceHint();
 
@@ -97,6 +98,16 @@ function populateGuests() {
     o.value = String(n);
     o.textContent = n === 1 ? '1 guest' : `${n} guests`;
     if (n === 2) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+function populateBedrooms() {
+  const sel = $('bedrooms');
+  for (let n = 0; n <= 5; n++) {
+    const o = document.createElement('option');
+    o.value = String(n);
+    o.textContent = n === 0 ? 'Any' : n === 1 ? '1 bedroom' : `${n} bedrooms`;
     sel.appendChild(o);
   }
 }
@@ -343,6 +354,7 @@ async function onSubmit(event) {
     checkIn: $('checkIn').value,
     checkOut: $('checkOut').value,
     guestCount: Number($('guestCount').value),
+    bedrooms: Number($('bedrooms').value) || undefined,
     priceMin: Number($('priceMin').value) || 0,
     priceMax: Number($('priceMax').value) || 300,
     sort: $('sort').value,

@@ -192,6 +192,20 @@ export class TujiaClient {
       })
     );
 
+    // 4b. Bedroom count (type 6, conditionType 0). The value is the plain number.
+    const bedrooms = Math.min(Math.max(Math.trunc(params.bedrooms || 0), 0), 5);
+    if (bedrooms) {
+      const bedroomLabel = `${bedrooms}居`;
+      conditions.push(
+        base(bedroomLabel, 6, String(bedrooms), 1, {
+          conditionType: 0,
+          labelDesc: bedroomLabel,
+          sort,
+          selected: true,
+        })
+      );
+    }
+
     // 5. Price range (type 7, conditionType 101).
     const priceMin = params.priceMin || 0;
     const priceMax = params.priceMax || 300;

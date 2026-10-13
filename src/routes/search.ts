@@ -34,6 +34,7 @@ router.post('/', async (req: Request, res: Response) => {
     district: req.body.district,
     roomCount: req.body.roomCount || 1,
     guestCount: req.body.guestCount || 2,
+    bedrooms: Number(req.body.bedrooms) || undefined,
     amenities: Array.isArray(req.body.amenities) ? req.body.amenities.map(String) : [],
     sort: req.body.sort || '1',
     acceptForeigners: req.body.acceptForeigners ?? false,

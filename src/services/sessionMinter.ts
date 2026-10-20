@@ -1,4 +1,5 @@
 import { writeFileSync, statSync } from 'fs';
+import { execFile } from 'child_process';
 import path from 'path';
 import { CONFIG } from '../config';
 import { isAnonymous, hasCookies } from './cookieJar';
@@ -20,6 +21,17 @@ export interface MintResult {
   searchOk: boolean;
 }
 
+function installChromium(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      path.resolve('node_modules/.bin/playwright'),
+      ['install', 'chromium'],
+      { timeout: 5 * 60_000 },
+      (err, _out, stderr) => (err ? reject(new Error(`playwright install failed: ${stderr || err.message}`)) : resolve())
+    );
+  });
+}
+
 /**
  * Drive m.tujia.com once and write the session it hands back.
  *
@@ -36,7 +48,19 @@ export async function mintSession(
   // and the HTTP path should not pay for it on every start when refresh is disabled.
   const { chromium, devices } = await import('playwright');
 
-  const browser = await chromium.launch({ headless: opts.headless !== false });
+  const launch = () => chromium.launch({ headless: opts.headless !== false });
+  let browser;
+  try {
+    browser = await launch();
+  } catch (err) {
+    // The browser binaries live in ~/.cache and go missing (cache cleanup, a Playwright
+    // bump); every scheduled refresh then fails silently until someone reinstalls.
+    // Reinstall once and retry rather than leaving the session to expire.
+    if (!/Executable doesn't exist/.test(String(err))) throw err;
+    console.log('[session] Chromium missing — running "playwright install chromium"');
+    await installChromium();
+    browser = await launch();
+  }
   try {
     // A mobile context deliberately: m.tujia.com mints mobile sessions and TujiaClient
     // sends a matching mobile UA. Mixing the two is rejected with errcode 55999.

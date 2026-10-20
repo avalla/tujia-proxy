@@ -7,7 +7,10 @@ Canton Fair, Shenzhen for the Shenzhen World shows, and the major metro cities b
 Tujia has no public API and no English interface. This reverse-engineers its mobile web
 endpoints, translates the results, and serves a searchable English front end.
 
-![The search UI](docs/screenshots/ui-light.png)
+![The search UI: Guangzhou, Line 8 within 1.5 km, foreign guests accepted](docs/screenshots/ui-light.png)
+
+Also in [dark](docs/screenshots/ui-dark.png) (it follows the OS) and on a
+[phone](docs/screenshots/ui-mobile.png).
 
 ## Quick start
 
@@ -34,13 +37,38 @@ A login only unlocks Tujia's member pricing (up to ~15% off). Without it, prices
 implies (¥100–199) and says so, instead of inventing a figure. `bun run session -- --login`
 opens a visible browser if you have a Chinese number to receive the SMS.
 
+## The search form
+
+Built for a foreign visitor who knows where they need to be and not much else about the city.
+
+- **The trip comes first.** City, check-in, check-out, guests and Search sit on one line. Under
+  the dates, **1 night · 1 week · 2 weeks · Custom** sets the length; with a preset picked,
+  moving the check-in moves the check-out with it. The default is today for one week, and
+  dates in the past are refused.
+- **Everything else waits behind Filters.** A sentence beside the button says what is applied
+  ("Within 1.5 km of Line 8 · 1+ bedroom · Accepts foreign guests"), so the panel never has to
+  be opened just to check. The button counts what differs from the defaults; **Clear** puts
+  them back.
+- **Accepts foreign guests is on by default.** Many hosts may not register foreign passports,
+  so for this audience it is the safe starting point. Untick it to see everything.
+- **"Best lines for …"** lists the metro lines with a stop within 2 km of the place you picked
+  (the Canton Fair, Shenzhen World, an airport), with the walk from that stop. One click
+  filters to the whole line and caps the distance at 1.5 km, since Tujia's own "near the line"
+  reaches 4 km out.
+- **One field for a station**, with autocomplete in English or Chinese, instead of a
+  400-option list. Amenities have their own search box ("parking", "washer").
+- **Sort sits above the results** and re-runs the search when changed. Results load as you
+  scroll. On a phone the form folds to one line ("Guangzhou · 20 Oct – 27 Oct · 2 guests ·
+  Edit search") once you search, so the listings are on the first screen.
+
 ## What you get
 
 - **10 cities, switchable in the form** — Guangzhou, Shenzhen, Shanghai, Beijing, Chongqing,
   Chengdu, Hangzhou, Xi'an, Nanjing, Suzhou. Metro network, districts, attractions and the
   whole filter vocabulary swap with the city
-- **3,843 metro stations across 174 lines**, searchable in English (Pazhou, Futian, Chaoyang,
-  Jing'an…) — with no Chinese left in any English-facing field
+- **3,844 metro stations across 174 lines**, searchable in English (Pazhou, Futian, Chaoyang,
+  Jing'an…) — with no Chinese left in any English-facing field. One of them is added by hand:
+  Tujia's taxonomy leaves Beijing's Daxing Airport terminus off its own airport line
 - **~100 filters per city** translated — accepts foreign guests, near metro, free parking,
   kitchen, instant confirmation, rating floors, and the rest of Tujia's taxonomy
 - **Translated detail pages** — photos, amenities grouped by room (and an honest list of
@@ -127,11 +155,24 @@ requests, so dedupe by `id` when appending — the web UI does.
 
 ## Keeping it working
 
-Sessions expire. When search starts returning `401 Tujia session expired`, refresh
-`cookies.txt` from DevTools — the file is re-read automatically, **no restart needed**.
+Sessions expire after a few hours, and the server re-mints its own every 30 minutes. If search
+still returns `401 Tujia session expired`, run `bun run session`, or paste fresh cookies into
+`cookies.txt`. The file is re-read automatically, **no restart needed**.
 
 Accepted formats: one `name=value` per line (`#` for comments), or a single pasted
 `Cookie: a=1; b=2` header line. Use `TUJIA_COOKIES_FILE` to point elsewhere.
+
+Session minting needs Playwright's Chromium. If it fails with `Executable doesn't exist`, run
+`npx playwright install chromium`. The running server's automatic refresh reinstalls it by
+itself when it finds it missing (typically after a Playwright upgrade).
+
+### Deploying behind a CDN
+
+The HTML pages are served `no-cache`, and every `.css`/`.js` they reference gets `?v=<mtime>`
+appended at request time. Cloudflare gives static assets a 4-hour browser TTL regardless of
+what the origin says, and without the version a deploy paired new HTML with the old `app.js`,
+which failed on an element that no longer existed and left the page blank. Nothing to do
+by hand: any change to a file changes its URL.
 
 Reference requests for both live endpoints are kept in `requests.http`.
 
@@ -148,6 +189,15 @@ To refresh the filter catalogs after Tujia changes its taxonomy:
 bun run catalog                      # every city
 bun run catalog -- --city shenzhen   # just one
 ```
+
+> ⚠️ Check `git diff --stat src/catalog` after every run. On an anonymous session Tujia can
+> return the metro network with **no districts and no filters**, and the generator writes that
+> out, wiping the city's filter vocabulary. Revert and retry with a logged-in session.
+
+A station Tujia leaves out of its taxonomy goes in `extraStations` in `src/catalog/cities.ts`,
+never in a generated file. It is spliced in at load time, so regenerating cannot drop it. It
+has no Tujia id, so it cannot be searched on; it only counts for nearest-station and the line
+advice.
 
 ### Adding a city
 
@@ -180,11 +230,12 @@ and the reverse-engineering notes.
   fills them, and there is no translation endpoint. Ratings, sub-scores and review tags
   are translated; the comment bodies are shown as written, and labelled as such.
 - CNY→EUR uses a **fixed rate** (`CONFIG.CNY_TO_EUR`), so prices are indicative.
-- Booking still happens on Tujia, in Chinese. The **Book ↗** link opens the listing there.
+- Booking still happens on Tujia, in Chinese. **Details ↗** on a result opens the translated
+  page, and **Book on Tujia ↗** there opens the listing on Tujia.
 - **Filter ids are per city.** They overlap heavily but are not identical — Shenzhen carries a
   sea-view filter Guangzhou does not, Beijing a 四合院 courtyard-house type. Always read them
   from `/api/v1/filters?city=…` for the city you are about to search.
-- The date and price defaults (`2026-10-10` → `2026-11-05`, ¥300 cap) still encode the Canton
-  Fair stay, and do not change when you switch city.
+- The defaults are a week from today and a ¥300-a-night cap. The cap is Guangzhou-shaped and
+  does not change when you switch city; Shanghai and Beijing usually want more.
 - The Playwright scraper accepts `--city` but its output has no nearest-station or landmark
   distance — the HTTP proxy is the multi-city path.

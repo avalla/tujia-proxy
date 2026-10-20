@@ -226,12 +226,100 @@ function syncLandmark() {
     $('maxFair').value = '';
     $('maxFair').disabled = true;
     $('maxFair-label').textContent = 'Max distance to landmark';
+    renderLineAdvice(); // hides it: no landmark, nothing to advise on
     return;
   }
   $('maxFair').disabled = false;
   $('maxFair-label').textContent = `Max distance to ${mark.name}`;
   $('landmark-badge-text').textContent = `${mark.name} reference`;
   $('landmark-badge').title = `Every listing shows its distance to ${mark.name} (${mark.nameCn})`;
+  renderLineAdvice();
+}
+
+/** A line counts as serving the landmark if one of its stops is a walk away from it. */
+const ADVICE_MAX_KM = 2;
+
+/**
+ * The lines that stop near the current landmark, closest stop first, as one-click
+ * line filters: staying anywhere along one of them means a direct ride there.
+ * Straight-line distance over the catalog's own coordinates, the same bd09 points
+ * the cards measure with, so the advice and the cards agree.
+ */
+function renderLineAdvice() {
+  const box = $('line-advice');
+  box.textContent = '';
+  const mark = currentLandmark();
+  if (!mark || !catalog?.metroLines.length) {
+    box.hidden = true;
+    return;
+  }
+
+  // Branches repeat a line name; keep the segment whose stop is closest.
+  const byLine = new Map();
+  for (const line of catalog.metroLines) {
+    for (const s of line.stations) {
+      const d = kmBetween(s, mark);
+      const prev = byLine.get(line.en);
+      if (!prev || d < prev.d) byLine.set(line.en, { line, station: s, d });
+    }
+  }
+  const near = [...byLine.values()]
+    .filter((x) => x.d <= ADVICE_MAX_KM)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 4);
+
+  box.hidden = false;
+  const title = document.createElement('p');
+  title.className = 'line-advice-title';
+  title.textContent = near.length
+    ? `Best lines for ${mark.name}`
+    : `No metro stop within ${ADVICE_MAX_KM} km of ${mark.name}`;
+  box.appendChild(title);
+  if (!near.length) {
+    // Saying so beats recommending a line whose nearest stop is a taxi ride away.
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = 'Use "Max distance" below to stay close to it instead.';
+    box.appendChild(p);
+    return;
+  }
+
+  for (const { line, station, d } of near) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'line-pick';
+    btn.dataset.line = line.filterValue || '';
+    const walk = Math.max(1, Math.ceil((d / 4.5) * 60)); // utils/geo.ts walkMinutes(), 4.5 km/h
+    btn.innerHTML =
+      `<span class="line">${esc(line.en)}</span>` +
+      `<span class="line-pick-stop">${esc(station.en.replace(/ Station$/, ''))}</span>` +
+      `<span class="line-pick-walk">${walk} min walk</span>`;
+    btn.title = `Stay anywhere along ${line.label}: its ${station.en} stop is ${d.toFixed(1)} km from ${mark.name}`;
+    btn.addEventListener('click', () => {
+      // A line without a whole-line filter id can still anchor on its nearest stop.
+      if (line.filterValue) {
+        $('station').value = '';
+        $('metroLine').value = $('metroLine').value === line.filterValue ? '' : line.filterValue;
+      } else {
+        $('metroLine').value = '';
+        $('station').value = `${station.en} · ${line.en}`;
+      }
+      syncLocationHint();
+      // Tujia's own "near the line" reaches 4 km out (53 minutes on foot), which is
+      // no advice at all. Tighten it, unless the user already chose a radius.
+      if ($('metroLine').value && !$('maxLineKm').value) $('maxLineKm').value = '1.5';
+      syncClearButton();
+    });
+    box.appendChild(btn);
+  }
+  syncLineAdvice();
+}
+
+/** Mark the suggestion that matches the line filter, so it reads as a toggle. */
+function syncLineAdvice() {
+  for (const btn of $('line-advice').querySelectorAll('.line-pick')) {
+    btn.setAttribute('aria-pressed', String(Boolean(btn.dataset.line) && btn.dataset.line === $('metroLine').value));
+  }
 }
 
 /** Whole-line options. Only lines Tujia gives a 全线 filter id for are selectable. */
@@ -263,6 +351,7 @@ function syncLocationHint() {
 
   // The line-distance filter only means anything with a line selected, so it appears
   // and disappears with one rather than sitting there inert.
+  syncLineAdvice();
   const lineActive = !station && Boolean(line.value);
   $('lineDistance-field').hidden = !lineActive;
   if (!lineActive) $('maxLineKm').value = '';
@@ -339,8 +428,20 @@ function renderSorts() {
   }
 }
 
+/**
+ * Ticked on first load. Accepting foreign guests is a licence many Chinese hosts lack
+ * (they must register guests' passports), so for this site's visitors an untick is
+ * the exception — and every city ships the filter under the same id.
+ */
+const DEFAULT_AMENITIES = new Set(['237']);
+
 function renderAmenities() {
   const host = $('amenity-groups');
+  // Filter ids are globally unique, so a city switch keeps whatever is ticked and
+  // exists in the new city too. First load starts from the defaults.
+  const ticked = host.childElementCount
+    ? new Set([...host.querySelectorAll('input:checked')].map((c) => c.value))
+    : DEFAULT_AMENITIES;
   host.textContent = ''; // the vocabulary is per city, so a reload replaces it wholesale
   // Most useful groups first for a foreign visitor.
   const priority = ['Special requirements', 'Facilities', 'Services', 'Neighbourhood'];
@@ -370,6 +471,7 @@ function renderAmenities() {
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.value = item.value;
+      cb.checked = ticked.has(item.value);
       cb.dataset.group = g.en;
       cb.addEventListener('change', () => syncGroupCount(details));
       const text = document.createElement('span');
@@ -381,6 +483,7 @@ function renderAmenities() {
     }
     details.appendChild(items);
     host.appendChild(details);
+    syncGroupCount(details);
   }
   $('amenity-filter').value = '';
   $('amenity-empty').hidden = true;
@@ -423,9 +526,13 @@ function filterAmenities() {
   $('amenity-empty').hidden = !term || any;
 }
 
-/** Everything that narrows the search beyond city, dates and guests. */
+/** Every departure from the defaults, beyond city, dates and guests. */
 function activeFilterCount() {
-  let n = document.querySelectorAll('#amenity-groups input:checked').length;
+  // A default filter counts only once unticked: that is the change Clear would undo.
+  let n = 0;
+  for (const cb of document.querySelectorAll('#amenity-groups input')) {
+    if (cb.checked !== DEFAULT_AMENITIES.has(cb.value)) n++;
+  }
   if (Number($('bedrooms').value)) n++;
   if (Number($('priceMin').value) > 0 || Number($('priceMax').value) !== 300) n++;
   if ($('station').value.trim() || $('metroLine').value) n++;
@@ -440,7 +547,7 @@ function syncClearButton() {
   $('clear-btn').textContent = n === 1 ? 'Clear 1 filter' : `Clear ${n} filters`;
 }
 
-/** Back to city, dates and guests only. Those three are the trip, not filters. */
+/** Back to the defaults. City, dates and guests are the trip, not filters, so they stay. */
 function clearFilters() {
   $('bedrooms').value = '0';
   $('priceMin').value = '0';
@@ -450,7 +557,7 @@ function clearFilters() {
   $('maxLineKm').value = '';
   $('maxFair').value = '';
   $('amenity-filter').value = '';
-  for (const cb of document.querySelectorAll('#amenity-groups input:checked')) cb.checked = false;
+  for (const cb of document.querySelectorAll('#amenity-groups input')) cb.checked = DEFAULT_AMENITIES.has(cb.value);
   $('amenity-groups').querySelectorAll('details').forEach(syncGroupCount);
   filterAmenities();
   updatePriceHint();

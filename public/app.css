@@ -173,6 +173,28 @@ body {
 }
 .stay-length input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+/* ── line advice: lines stopping near the landmark ───────────────── */
+.line-advice { margin: 0 0 14px; display: flex; flex-direction: column; gap: 4px; }
+.line-advice[hidden] { display: none; }
+.line-advice-title { margin: 0 0 2px; font-size: 12.5px; color: var(--ink-2); }
+.line-advice .hint { margin: 0; }
+.line-pick {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px;
+  padding: 0 10px; font: inherit; font-size: 13px; color: var(--ink); text-align: left;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 7px;
+  cursor: pointer;
+}
+.line-pick:hover { border-color: var(--ink-3); }
+.line-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.line-pick[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.line-pick .line {
+  flex: none; font-size: 11px; font-weight: 650; line-height: 1.7;
+  padding: 0 7px; border-radius: 999px;
+  background: var(--metro); color: var(--metro-ink); white-space: nowrap;
+}
+.line-pick-stop { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.line-pick-walk { flex: none; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
 /* ── sticky action bar ───────────────────────────────────────────── */
 .panel-actions {
   position: sticky; bottom: 0; z-index: 1;
@@ -399,6 +421,7 @@ body {
   .field input, .field select, .sort-field select { font-size: 16px; height: 44px; }
   .amenities label { padding: 6px 0; font-size: 14px; }
   .stay-length span { height: 40px; font-size: 14px; }
+  .line-pick { min-height: 44px; font-size: 14px; }
   .search-btn { height: 48px; font-size: 16px; }
 
   .panel-summary {

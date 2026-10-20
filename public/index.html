@@ -91,6 +91,12 @@
 
       <section class="field-group">
         <h2>Location</h2>
+        <label class="field" id="landmark-field" hidden>
+          <span>Where you need to be</span>
+          <select id="landmark"></select>
+        </label>
+        <!-- Filled by renderLineAdvice(): the lines that stop near that landmark. -->
+        <div class="line-advice" id="line-advice" hidden></div>
         <label class="field">
           <span>Near metro station</span>
           <input type="search" id="station" list="station-list" placeholder="Type a station name" autocomplete="off" spellcheck="false">
@@ -114,10 +120,6 @@
           </select>
         </label>
         <p class="hint" id="location-hint"></p>
-        <label class="field" id="landmark-field" hidden>
-          <span>Measure distances from</span>
-          <select id="landmark"></select>
-        </label>
         <label class="field">
           <span id="maxFair-label">Max distance to landmark</span>
           <select id="maxFair">

@@ -26,20 +26,22 @@
 <main class="wrap layout">
 
   <!-- ── Search panel ─────────────────────────────────────────────── -->
-  <aside class="panel">
+  <aside class="panel" id="panel">
+    <!-- Phone only: once a search has run, the form folds to this one line so the
+         results are on the first screen instead of under twenty controls. -->
+    <button type="button" class="panel-summary" id="panel-summary" aria-controls="search-form" aria-expanded="true">
+      <span class="panel-summary-text" id="panel-summary-text"></span>
+      <span class="panel-summary-action">Edit search</span>
+    </button>
+
     <form id="search-form">
 
       <section class="field-group">
-        <h2>City</h2>
+        <h2>Where &amp; when</h2>
         <label class="field">
-          <span class="sr-only">City</span>
+          <span>City</span>
           <select id="city"></select>
         </label>
-        <p class="hint" id="city-hint"></p>
-      </section>
-
-      <section class="field-group">
-        <h2>Dates</h2>
         <div class="row">
           <label class="field">
             <span>Check in</span>
@@ -50,27 +52,29 @@
             <input type="date" id="checkOut" required>
           </label>
         </div>
-        <p class="nights" id="nights"></p>
+        <p class="hint" id="nights"></p>
       </section>
 
       <section class="field-group">
-        <h2>Guests &amp; price</h2>
-        <label class="field">
-          <span>Guests</span>
-          <select id="guestCount"></select>
-        </label>
-        <label class="field">
-          <span>Bedrooms</span>
-          <select id="bedrooms"></select>
-        </label>
+        <h2>Guests &amp; budget</h2>
+        <div class="row">
+          <label class="field">
+            <span>Guests</span>
+            <select id="guestCount"></select>
+          </label>
+          <label class="field">
+            <span>Bedrooms</span>
+            <select id="bedrooms"></select>
+          </label>
+        </div>
         <div class="row">
           <label class="field">
             <span>Min ¥ / night</span>
-            <input type="number" id="priceMin" value="0" min="0" step="10">
+            <input type="number" id="priceMin" value="0" min="0" step="10" inputmode="numeric">
           </label>
           <label class="field">
             <span>Max ¥ / night</span>
-            <input type="number" id="priceMax" value="300" min="0" step="10">
+            <input type="number" id="priceMax" value="300" min="0" step="10" inputmode="numeric">
           </label>
         </div>
         <p class="hint" id="price-hint"></p>
@@ -79,7 +83,12 @@
       <section class="field-group">
         <h2>Location</h2>
         <label class="field">
-          <span>Near metro line</span>
+          <span>Near metro station</span>
+          <input type="search" id="station" list="station-list" placeholder="Type a station name" autocomplete="off" spellcheck="false">
+          <datalist id="station-list"></datalist>
+        </label>
+        <label class="field">
+          <span>Or anywhere along a metro line</span>
           <select id="metroLine">
             <option value="">Any line</option>
           </select>
@@ -95,16 +104,9 @@
             <option value="3">Within 3 km</option>
           </select>
         </label>
-        <label class="field">
-          <span>Near metro station</span>
-          <input type="search" id="station-filter" placeholder="Type to filter stations…" autocomplete="off">
-          <select id="metroStation" size="1">
-            <option value="">Anywhere in this city</option>
-          </select>
-        </label>
         <p class="hint" id="location-hint"></p>
         <label class="field" id="landmark-field" hidden>
-          <span>Distance anchor</span>
+          <span>Measure distances from</span>
           <select id="landmark"></select>
         </label>
         <label class="field">
@@ -121,26 +123,35 @@
       </section>
 
       <section class="field-group">
-        <h2>Sort</h2>
-        <label class="field">
-          <span class="sr-only">Sort order</span>
-          <select id="sort"></select>
-        </label>
-      </section>
-
-      <section class="field-group">
         <h2>Filters</h2>
+        <label class="field">
+          <span class="sr-only">Find a filter</span>
+          <input type="search" id="amenity-filter" placeholder="Find a filter, e.g. parking, washer" autocomplete="off">
+        </label>
         <div id="amenity-groups" class="amenities"></div>
+        <p class="hint" id="amenity-empty" hidden>No filter matches that.</p>
       </section>
 
-      <button type="submit" class="search-btn" id="search-btn">Search</button>
       <p class="catalog-note" id="catalog-note"></p>
+
+      <!-- Sticky, so the one action is never more than a glance away however far the
+           filter list has been scrolled. -->
+      <div class="panel-actions">
+        <button type="submit" class="search-btn" id="search-btn">Search</button>
+        <button type="button" class="clear-btn" id="clear-btn" hidden>Clear filters</button>
+      </div>
     </form>
   </aside>
 
   <!-- ── Results ──────────────────────────────────────────────────── -->
-  <section class="results">
-    <div id="summary" class="summary" hidden></div>
+  <section class="results" id="results">
+    <div class="toolbar">
+      <div id="summary" class="summary" hidden></div>
+      <label class="sort-field">
+        <span>Sort by</span>
+        <select id="sort"></select>
+      </label>
+    </div>
     <div id="status" class="status">
       <div class="status-inner">
         <h2>Ready when you are</h2>

@@ -4,7 +4,9 @@ const $ = (id) => document.getElementById(id);
 const CNY_TO_EUR = 0.13; // mirrors CONFIG.CNY_TO_EUR
 
 let catalog = null;
-let allStations = []; // flattened, for the filter box
+let allStations = []; // flattened, for the nearest-station suggestions
+/** Datalist label ("Gaozeng · Line 3") → station. The label is what the input holds. */
+let stationByLabel = new Map();
 
 /** The landmark distances are currently measured from. Null for a city with none. */
 const currentLandmark = () =>
@@ -33,21 +35,28 @@ async function boot() {
   $('checkOut').addEventListener('change', updateNights);
   $('priceMin').addEventListener('input', updatePriceHint);
   $('priceMax').addEventListener('input', updatePriceHint);
-  $('station-filter').addEventListener('input', renderStations);
-  $('metroStation').addEventListener('change', () => {
-    if ($('metroStation').value) $('metroLine').value = ''; // station is the narrower ask
+  $('station').addEventListener('input', () => {
+    $('station').setCustomValidity('');
+    if (selectedStation()) $('metroLine').value = ''; // station is the narrower ask
     syncLocationHint();
   });
   $('metroLine').addEventListener('change', () => {
-    if ($('metroLine').value) {
-      $('metroStation').value = '';
-      $('station-filter').value = '';
-      renderStations();
-    }
+    if ($('metroLine').value) $('station').value = '';
     syncLocationHint();
   });
+  $('amenity-filter').addEventListener('input', filterAmenities);
+  $('clear-btn').addEventListener('click', clearFilters);
   $('search-form').addEventListener('submit', onSubmit);
+  // Any edit can change how many filters are active, so recount on all of them.
+  $('search-form').addEventListener('input', syncClearButton);
+  $('search-form').addEventListener('change', syncClearButton);
   $('landmark').addEventListener('change', syncLandmark);
+  // Sort lives above the results, so changing it re-runs the search that is showing
+  // rather than waiting for a Search press the user would not think to make.
+  $('sort').addEventListener('change', () => {
+    if (paging.body) $('search-form').requestSubmit();
+  });
+  $('panel-summary').addEventListener('click', () => setPanelCollapsed(false));
   // Every city has its own metro network, districts and filter vocabulary, so
   // switching one reloads the whole catalog rather than filtering what is loaded.
   $('city').addEventListener('change', () => loadCatalog($('city').value));
@@ -82,6 +91,7 @@ async function loadCatalog(cityId) {
   renderAmenities();
   renderLandmarks();
   syncLocationHint();
+  syncClearButton();
 
   const when = new Date(catalog.generatedAt);
   const filterCount = catalog.amenityGroups.reduce((n, g) => n + g.items.length, 0);
@@ -134,7 +144,6 @@ function renderCities() {
     if (c.id === catalog.city.id) o.selected = true;
     sel.appendChild(o);
   }
-  $('city-hint').textContent = `Searching ${catalog.city.name}. Metro lines, districts and filters all change with the city.`;
 }
 
 /**
@@ -191,71 +200,78 @@ function renderLines() {
 
 /**
  * A station and a line are both type-5 geo conditions and Tujia honours only one, so
- * the two selects are mutually exclusive. Picking a station wins; picking a line
- * clears the station.
+ * the two are mutually exclusive. Picking a station wins; picking a line clears the
+ * station.
  */
 function syncLocationHint() {
   const line = $('metroLine');
-  const station = $('metroStation');
+  const station = selectedStation();
   const hint = $('location-hint');
 
   // The line-distance filter only means anything with a line selected, so it appears
   // and disappears with one rather than sitting there inert.
-  const lineActive = !station.value && Boolean(line.value);
+  const lineActive = !station && Boolean(line.value);
   $('lineDistance-field').hidden = !lineActive;
   if (!lineActive) $('maxLineKm').value = '';
 
-  if (station.value) {
+  if (station) {
     line.disabled = true;
-    const name = station.selectedOptions[0]?.textContent || 'a station';
-    hint.textContent = `Searching around ${name}. Clear it to filter by a whole line instead.`;
+    hint.textContent = `Searching around ${station.en}. Clear the station to filter by a whole line instead.`;
   } else if (line.value) {
     line.disabled = false;
     const label = line.selectedOptions[0]?.textContent || 'this line';
     hint.textContent =
       `Searching along ${label.split(' · ')[0]}. Tujia's own line filter is generous — ` +
-      'tighten it below if you want to be genuinely walkable to it.';
+      'tighten it above if you want to be genuinely walkable to it.';
   } else {
     line.disabled = false;
-    hint.textContent = 'Pick a line for a whole corridor, or a single station to narrow it down.';
+    hint.textContent = allStations.length
+      ? `No metro filter: anywhere in ${catalog?.city.name || 'the city'}.`
+      : `${catalog?.city.name || 'This city'} has no metro in the catalog.`;
   }
 }
 
+/**
+ * One searchable field instead of a filter box over a 400-option select. The datalist
+ * label carries the line, because interchanges and branches repeat a name with a
+ * different filter id per line.
+ */
 function renderStations() {
-  const sel = $('metroStation');
-  const term = $('station-filter').value.trim().toLowerCase();
-  const keep = sel.value;
-
-  sel.textContent = '';
-  const any = document.createElement('option');
-  any.value = '';
-  any.textContent = `Anywhere in ${catalog ? catalog.city.name : 'this city'}`;
-  sel.appendChild(any);
-
+  const list = $('station-list');
+  list.textContent = '';
+  stationByLabel = new Map();
   for (const line of catalog ? catalog.metroLines : []) {
-    const matches = line.stations.filter(
-      (s) =>
-        !term ||
-        s.en.toLowerCase().includes(term) ||
-        s.cn.includes(term) ||
-        line.en.toLowerCase().includes(term)
-    );
-    if (!matches.length) continue;
-
-    const group = document.createElement('optgroup');
-    group.label = line.en;
-    for (const s of matches) {
+    for (const s of line.stations) {
+      const label = `${s.en} · ${line.en}`;
+      if (stationByLabel.has(label)) continue; // a branch segment repeating its trunk
+      stationByLabel.set(label, s);
       const o = document.createElement('option');
-      o.value = s.value;
-      o.textContent = s.en;
-      o.dataset.name = s.cn;
-      o.dataset.lng = s.lng;
-      o.dataset.lat = s.lat;
-      group.appendChild(o);
+      o.value = label;
+      o.label = s.cn; // shown beside the name, and matched when typing Chinese
+      list.appendChild(o);
     }
-    sel.appendChild(group);
   }
-  if (keep) sel.value = keep;
+  // A station from the previous city means nothing here.
+  if ($('station').value && !selectedStation()) $('station').value = '';
+  $('station').disabled = stationByLabel.size === 0;
+  $('station').placeholder = stationByLabel.size ? 'Type a station name' : 'No metro in this city';
+}
+
+/** The station the input names, or null. A bare name (English or Chinese) works too. */
+function selectedStation() {
+  const text = $('station').value.trim();
+  if (!text) return null;
+  const exact = stationByLabel.get(text);
+  if (exact) return exact;
+  // Catalog names carry a "Station" suffix nobody types, so compare without it.
+  const bare = (s) => s.toLowerCase().replace(/\s+station$/, '').trim();
+  const want = bare(text);
+  const all = [...stationByLabel.values()];
+  const hit = all.find((s) => bare(s.en) === want || s.cn === text || s.cn === `${text}站`);
+  if (hit) return hit; // same name on several lines: any of them anchors the same spot
+  // Otherwise a prefix, but only when it names exactly one place.
+  const names = new Set(all.filter((s) => bare(s.en).startsWith(want)).map((s) => s.en));
+  return names.size === 1 ? all.find((s) => names.has(s.en)) : null;
 }
 
 function renderSorts() {
@@ -302,19 +318,109 @@ function renderAmenities() {
       cb.type = 'checkbox';
       cb.value = item.value;
       cb.dataset.group = g.en;
-      cb.addEventListener('change', () => {
-        const n = items.querySelectorAll('input:checked').length;
-        count.hidden = n === 0;
-        count.textContent = String(n);
-      });
+      cb.addEventListener('change', () => syncGroupCount(details));
       const text = document.createElement('span');
       text.textContent = item.en;
       text.title = item.cn;
+      l.dataset.search = `${item.en} ${item.cn}`.toLowerCase();
       l.append(cb, text);
       items.appendChild(l);
     }
     details.appendChild(items);
     host.appendChild(details);
+  }
+  $('amenity-filter').value = '';
+  $('amenity-empty').hidden = true;
+}
+
+/** The badge on a group's summary, so a ticked filter shows even with the group shut. */
+function syncGroupCount(details) {
+  const n = details.querySelectorAll('input:checked').length;
+  const count = details.querySelector('.count');
+  count.hidden = n === 0;
+  count.textContent = String(n);
+}
+
+/**
+ * Narrow ~95 filters across a dozen folded groups to the ones whose English or
+ * Chinese name matches, opening the groups that still hold a match. Clearing the box
+ * puts the groups back as the user left them.
+ */
+function filterAmenities() {
+  const term = $('amenity-filter').value.trim().toLowerCase();
+  let any = false;
+  for (const details of $('amenity-groups').querySelectorAll('details')) {
+    if (!term) {
+      if (details.dataset.wasOpen != null) details.open = details.dataset.wasOpen === '1';
+      delete details.dataset.wasOpen;
+      details.hidden = false;
+      details.querySelectorAll('label').forEach((l) => (l.hidden = false));
+      continue;
+    }
+    if (details.dataset.wasOpen == null) details.dataset.wasOpen = details.open ? '1' : '0';
+    let hits = 0;
+    for (const l of details.querySelectorAll('label')) {
+      l.hidden = !l.dataset.search.includes(term);
+      if (!l.hidden) hits++;
+    }
+    details.hidden = hits === 0;
+    details.open = hits > 0;
+    any ||= hits > 0;
+  }
+  $('amenity-empty').hidden = !term || any;
+}
+
+/** Everything that narrows the search beyond city, dates and guests. */
+function activeFilterCount() {
+  let n = document.querySelectorAll('#amenity-groups input:checked').length;
+  if (Number($('bedrooms').value)) n++;
+  if (Number($('priceMin').value) > 0 || Number($('priceMax').value) !== 300) n++;
+  if ($('station').value.trim() || $('metroLine').value) n++;
+  if ($('maxLineKm').value) n++;
+  if ($('maxFair').value) n++;
+  return n;
+}
+
+function syncClearButton() {
+  const n = activeFilterCount();
+  $('clear-btn').hidden = n === 0;
+  $('clear-btn').textContent = n === 1 ? 'Clear 1 filter' : `Clear ${n} filters`;
+}
+
+/** Back to city, dates and guests only. Those three are the trip, not filters. */
+function clearFilters() {
+  $('bedrooms').value = '0';
+  $('priceMin').value = '0';
+  $('priceMax').value = '300';
+  $('station').value = '';
+  $('metroLine').value = '';
+  $('maxLineKm').value = '';
+  $('maxFair').value = '';
+  $('amenity-filter').value = '';
+  for (const cb of document.querySelectorAll('#amenity-groups input:checked')) cb.checked = false;
+  $('amenity-groups').querySelectorAll('details').forEach(syncGroupCount);
+  filterAmenities();
+  updatePriceHint();
+  syncLocationHint();
+  syncClearButton();
+}
+
+/**
+ * Phone only (the CSS ignores the class above 900px): fold the form to a one-line
+ * summary so a finished search lands on its results, not on the form that made it.
+ */
+function setPanelCollapsed(collapsed) {
+  $('panel').classList.toggle('collapsed', collapsed);
+  $('panel-summary').setAttribute('aria-expanded', String(!collapsed));
+  if (collapsed) {
+    const fmt = (v) => new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const n = activeFilterCount();
+    $('panel-summary-text').textContent = [
+      catalog?.city.name,
+      `${fmt($('checkIn').value)} – ${fmt($('checkOut').value)}`,
+      $('guestCount').selectedOptions[0]?.textContent,
+      n ? `${n} filter${n === 1 ? '' : 's'}` : '',
+    ].filter(Boolean).join(' · ');
   }
 }
 
@@ -324,6 +430,7 @@ function updateNights() {
   const a = new Date($('checkIn').value);
   const b = new Date($('checkOut').value);
   const nights = Math.round((b - a) / 86400000);
+  $('checkOut').setCustomValidity('');
   $('nights').textContent =
     Number.isFinite(nights) && nights > 0 ? `${nights} nights` : 'Check-out must be after check-in';
 }
@@ -357,8 +464,18 @@ function headline(h) {
 async function onSubmit(event) {
   event.preventDefault();
 
-  const stationOpt = $('metroStation').selectedOptions[0];
-  const stationId = $('metroStation').value;
+  // Catch the two typos the form would otherwise send upstream and get nothing back for.
+  if ($('checkOut').value <= $('checkIn').value) {
+    $('checkOut').setCustomValidity('Check-out must be after check-in.');
+    $('checkOut').reportValidity();
+    return;
+  }
+  const station = selectedStation();
+  if ($('station').value.trim() && !station) {
+    $('station').setCustomValidity('Pick a station from the list, or clear the field.');
+    $('station').reportValidity();
+    return;
+  }
 
   const body = {
     cityId: $('city').value || catalog?.city.id,
@@ -372,11 +489,11 @@ async function onSubmit(event) {
     amenities: [...document.querySelectorAll('#amenity-groups input:checked')].map((c) => c.value),
   };
 
-  if (stationId) {
-    body.metroStationId = stationId;
-    body.metroStationName = stationOpt.dataset.name;
-    body.metroLng = Number(stationOpt.dataset.lng);
-    body.metroLat = Number(stationOpt.dataset.lat);
+  if (station) {
+    body.metroStationId = station.value;
+    body.metroStationName = station.cn;
+    body.metroLng = Number(station.lng);
+    body.metroLat = Number(station.lat);
   } else if ($('metroLine').value) {
     body.metroLineId = $('metroLine').value;
     if ($('maxLineKm').value) body.maxDistanceToMetroLineKm = Number($('maxLineKm').value);
@@ -387,6 +504,10 @@ async function onSubmit(event) {
 
   paging = { body, nextPageIndex: null, seen: new Set(), loading: false };
 
+  if (matchMedia('(max-width: 900px)').matches) {
+    setPanelCollapsed(true);
+    $('panel').scrollIntoView({ block: 'start' });
+  }
   setLoading(true);
   try {
     const data = await postSearch(body);
@@ -520,7 +641,7 @@ function render(data) {
       syncLoadMore(data);
       return;
     }
-    if (data.scanned != null && landmarkKm && !lineKm && !$('metroStation').value && allStations.length) {
+    if (data.scanned != null && landmarkKm && !lineKm && !paging.body?.metroStationId && allStations.length) {
       // Distance to the anchor is filtered locally over popularity-ranked results, so a
       // tight radius rarely lands. Anchoring the search on a nearby station works better.
       const name = data.landmark?.name || 'the landmark';
@@ -657,12 +778,11 @@ function offerLandmarkStations() {
     btn.className = 'chip suggest-chip';
     btn.textContent = `${s.en} · ${s.d.toFixed(1)} km`;
     btn.addEventListener('click', () => {
-      $('station-filter').value = '';
-      renderStations();
-      $('metroStation').value = s.value;
+      $('station').value = `${s.en} · ${s.line}`;
       $('metroLine').value = '';
       $('maxFair').value = '';
       syncLocationHint();
+      syncClearButton();
       $('search-form').requestSubmit();
     });
     box.appendChild(btn);

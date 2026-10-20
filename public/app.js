@@ -28,11 +28,11 @@ async function boot() {
   populateGuests();
   populateBedrooms();
   setDefaultDates();
-  updateNights();
   updatePriceHint();
 
-  $('checkIn').addEventListener('change', updateNights);
-  $('checkOut').addEventListener('change', updateNights);
+  $('checkIn').addEventListener('change', onCheckInChange);
+  $('checkOut').addEventListener('change', onCheckOutChange);
+  $('stay-length').addEventListener('change', onStayLengthChange);
   $('priceMin').addEventListener('input', updatePriceHint);
   $('priceMax').addEventListener('input', updatePriceHint);
   $('station').addEventListener('input', () => {
@@ -113,14 +113,67 @@ function populateGuests() {
   }
 }
 
-/** Default stay: today → today + 7 nights, in the visitor's own calendar day. */
+/* Dates are handled as YYYY-MM-DD strings in the visitor's own calendar. Arithmetic
+   goes through a local-midnight Date, never `new Date('YYYY-MM-DD')`, which is UTC
+   and lands on the previous day west of Greenwich. */
+const isoDay = (d) => d.toLocaleDateString('sv'); // sv-SE formats as YYYY-MM-DD
+const localDate = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+const addDays = (iso, n) => {
+  const d = localDate(iso);
+  d.setDate(d.getDate() + n);
+  return isoDay(d);
+};
+const nightsBetween = (a, b) => Math.round((localDate(b) - localDate(a)) / 86400000);
+
+/** The ticked stay-length preset in nights, or null for "Custom" (exact dates). */
+const stayPreset = () => Number(document.querySelector('input[name="stay"]:checked')?.value) || null;
+
+/** Default stay: today → today + the preset (1 week), in the visitor's own calendar day. */
 function setDefaultDates() {
-  const iso = (d) => d.toLocaleDateString('sv'); // sv-SE formats as YYYY-MM-DD
-  const today = new Date();
-  const out = new Date(today);
-  out.setDate(out.getDate() + 7);
-  $('checkIn').value = iso(today);
-  $('checkOut').value = iso(out);
+  $('checkIn').value = isoDay(new Date());
+  applyStayLength();
+}
+
+/** With a preset ticked, check-out follows check-in, so moving the arrival keeps the length. */
+function applyStayLength() {
+  const n = stayPreset();
+  if (n && $('checkIn').value) $('checkOut').value = addDays($('checkIn').value, n);
+  syncDateLimits();
+  updateNights();
+}
+
+/** Nothing before today, and check-out at least a night after check-in. */
+function syncDateLimits() {
+  const today = isoDay(new Date());
+  $('checkIn').min = today;
+  $('checkOut').min = addDays($('checkIn').value || today, 1);
+}
+
+function onCheckInChange() {
+  if (stayPreset()) return applyStayLength();
+  // Exact dates: keep check-out, unless the new arrival has overtaken it.
+  if ($('checkIn').value && $('checkOut').value <= $('checkIn').value) {
+    $('checkOut').value = addDays($('checkIn').value, 1);
+  }
+  syncDateLimits();
+  updateNights();
+}
+
+/** A hand-picked check-out is exact dates, unless it happens to match a preset. */
+function onCheckOutChange() {
+  const n = nightsBetween($('checkIn').value, $('checkOut').value);
+  const match = document.querySelector(`input[name="stay"][value="${n}"]`);
+  (match || document.querySelector('input[name="stay"][value=""]')).checked = true;
+  updateNights();
+}
+
+function onStayLengthChange() {
+  if (stayPreset()) return applyStayLength();
+  // "Custom": open the check-out picker, which is the date they now want to set.
+  try { $('checkOut').showPicker(); } catch { $('checkOut').focus(); }
 }
 
 function populateBedrooms() {
@@ -413,7 +466,7 @@ function setPanelCollapsed(collapsed) {
   $('panel').classList.toggle('collapsed', collapsed);
   $('panel-summary').setAttribute('aria-expanded', String(!collapsed));
   if (collapsed) {
-    const fmt = (v) => new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const fmt = (v) => localDate(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     const n = activeFilterCount();
     $('panel-summary-text').textContent = [
       catalog?.city.name,
@@ -427,12 +480,17 @@ function setPanelCollapsed(collapsed) {
 /* ── small helpers ────────────────────────────────────────────────── */
 
 function updateNights() {
-  const a = new Date($('checkIn').value);
-  const b = new Date($('checkOut').value);
-  const nights = Math.round((b - a) / 86400000);
+  $('checkIn').setCustomValidity('');
   $('checkOut').setCustomValidity('');
-  $('nights').textContent =
-    Number.isFinite(nights) && nights > 0 ? `${nights} nights` : 'Check-out must be after check-in';
+  const a = $('checkIn').value, b = $('checkOut').value;
+  const nights = a && b ? nightsBetween(a, b) : NaN;
+  if (!(nights > 0)) {
+    $('nights').textContent = 'Check-out must be after check-in';
+    return;
+  }
+  const fmt = (iso) =>
+    localDate(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  $('nights').textContent = `${nights} night${nights === 1 ? '' : 's'} · ${fmt(a)} → ${fmt(b)}`;
 }
 
 function updatePriceHint() {
@@ -464,7 +522,13 @@ function headline(h) {
 async function onSubmit(event) {
   event.preventDefault();
 
-  // Catch the two typos the form would otherwise send upstream and get nothing back for.
+  // Catch the typos the form would otherwise send upstream and get nothing back for.
+  // A tab left open overnight still holds yesterday's "today", hence the re-check.
+  if ($('checkIn').value < isoDay(new Date())) {
+    $('checkIn').setCustomValidity('Check-in can’t be in the past.');
+    $('checkIn').reportValidity();
+    return;
+  }
   if ($('checkOut').value <= $('checkIn').value) {
     $('checkOut').setCustomValidity('Check-out must be after check-in.');
     $('checkOut').reportValidity();

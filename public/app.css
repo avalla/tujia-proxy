@@ -101,20 +101,39 @@ body {
 /* ── search: the trip row, a refine row, and a folded filters panel ── */
 .search { padding: 24px 0 4px; scroll-margin-top: 76px; /* clears the sticky top bar */ }
 
-/* City, dates, guests and Search on one line; the stay length sits under the dates
-   it drives. Everything else waits behind the Filters button. */
+/* Two rows on a desktop, read by column: where (city over best location), when
+   (dates over their length), who (guests and bedrooms), how much (price under
+   them), then Search. Everything else waits behind the Filters button.
+   Every placement uses `.trip > .trip-*`, one specificity everywhere, so each media
+   query below overrides by order alone. */
 .trip {
   display: grid;
-  grid-template-columns: minmax(170px, 1.3fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(110px, .7fr) auto;
-  align-items: end; gap: 8px 12px;
+  grid-template-columns: minmax(200px, 1.5fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(104px, .7fr) minmax(104px, .7fr) auto;
+  align-items: end; gap: 10px 12px;
   padding: 14px 16px 12px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
 }
 .trip .field { margin: 0; min-width: 0; }
 .trip .field input, .trip .field select { height: 42px; }
-.trip .search-btn { height: 42px; padding: 0 28px; }
-.trip .stay-length { grid-column: 2 / span 2; margin: 0; }
-.trip-nights { grid-column: 4 / -1; align-self: center; margin: 0; }
+.trip > .trip-city { grid-area: 1 / 1; }
+.trip > .trip-in { grid-area: 1 / 2; }
+.trip > .trip-out { grid-area: 1 / 3; }
+.trip > .trip-guests { grid-area: 1 / 4; }
+.trip > .trip-beds { grid-area: 1 / 5; }
+.trip > .trip-search { grid-area: 1 / 6; height: 42px; padding: 0 28px; }
+.trip > .trip-location { grid-area: 2 / 1; }
+.trip > .trip-stay { grid-area: 2 / 2 / auto / span 2; margin: 0; }
+.trip-stay .segmented span { height: 36px; } /* with the padding, the 42px of its row */
+.trip > .trip-price { grid-area: 2 / 4 / auto / span 2; }
+.trip > .trip-nights { grid-area: 3 / 2 / auto / span 2; margin: 0; }
+.trip > .trip-price-hint { grid-area: 3 / 4 / auto / span 2; margin: 0; }
+
+/* One label over a min–max pair, so the range reads as one value. */
+.price-range { display: flex; align-items: center; gap: 6px; }
+.price-range > span { flex: none; color: var(--ink-3); }
+.price-range input { flex: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.trip-price-hint { font-variant-numeric: tabular-nums; }
+.hint.error { color: var(--accent); }
 
 .refine { display: flex; align-items: center; gap: 12px; margin-top: 12px; min-height: 36px; }
 .filters-toggle {
@@ -213,28 +232,6 @@ body {
   box-shadow: 0 0 0 1px var(--line-strong);
 }
 .stay-length input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-/* ── line advice: lines stopping near the landmark ───────────────── */
-.line-advice { margin: 0 0 14px; display: flex; flex-direction: column; gap: 4px; }
-.line-advice[hidden] { display: none; }
-.line-advice-title { margin: 0 0 2px; font-size: 12.5px; color: var(--ink-2); }
-.line-advice .hint { margin: 0; }
-.line-pick {
-  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px;
-  padding: 0 10px; font: inherit; font-size: 13px; color: var(--ink); text-align: left;
-  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 7px;
-  cursor: pointer;
-}
-.line-pick:hover { border-color: var(--ink-3); }
-.line-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.line-pick[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.line-pick .line {
-  flex: none; font-size: 11px; font-weight: 650; line-height: 1.7;
-  padding: 0 7px; border-radius: 999px;
-  background: var(--metro); color: var(--metro-ink); white-space: nowrap;
-}
-.line-pick-stop { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.line-pick-walk { flex: none; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 .clear-btn {
   flex: none;
@@ -445,17 +442,27 @@ body {
 @media (prefers-reduced-motion: reduce) { .skeleton .sk { animation: none; } }
 
 /* ── responsive ──────────────────────────────────────────────────── */
-/* Tablet: the trip row wraps to two lines, the filters to two columns. */
+/* Tablet, three columns:
+   city · · | location · ·
+   in | out | guests
+   length · · | bedrooms
+   nights
+   price · · | Search
+   price in euros */
 @media (max-width: 1080px) {
-  /* city / in · out · guests / stay length · Search / nights */
   .trip { grid-template-columns: 1fr 1fr 1fr; }
-  .trip-city { grid-column: 1 / -1; }
-  .trip-guests { grid-column: 3; grid-row: 2; }
-  .trip .stay-length { grid-column: 1 / span 2; grid-row: 3; }
-  .trip .search-btn { grid-column: 3; grid-row: 3; }
-  .trip-nights { grid-column: 1 / -1; grid-row: 4; }
-  .filters { grid-template-columns: 1fr 1fr; }
-  .filters .field-group:last-of-type { grid-column: 1 / -1; }
+  .trip > .trip-city { grid-area: 1 / 1; }
+  .trip > .trip-location { grid-area: 1 / 2 / auto / span 2; }
+  .trip > .trip-in { grid-area: 2 / 1; }
+  .trip > .trip-out { grid-area: 2 / 2; }
+  .trip > .trip-guests { grid-area: 2 / 3; }
+  .trip > .trip-stay { grid-area: 3 / 1 / auto / span 2; }
+  .trip > .trip-beds { grid-area: 3 / 3; }
+  .trip > .trip-nights { grid-area: 4 / 1 / auto / -1; }
+  .trip > .trip-price { grid-area: 5 / 1 / auto / span 2; }
+  .trip > .trip-search { grid-area: 5 / 3; }
+  .trip > .trip-price-hint { grid-area: 6 / 1 / auto / -1; }
+  .filters { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {
@@ -464,10 +471,9 @@ body {
   /* 16px stops iOS Safari zooming the page on every field tap. */
   .field input, .field select, .sort-field select { font-size: 16px; height: 44px; }
   .trip .field input, .trip .field select { height: 46px; }
-  .trip .search-btn { height: 46px; font-size: 16px; }
+  .trip > .trip-search { height: 46px; font-size: 16px; }
   .amenities label { padding: 6px 0; font-size: 14px; }
   .stay-length span { height: 40px; font-size: 14px; }
-  .line-pick { min-height: 44px; font-size: 14px; }
   .filters-toggle, .clear-btn { min-height: 44px; }
   .apply-btn { height: 46px; font-size: 16px; }
 
@@ -486,13 +492,14 @@ body {
 }
 
 @media (max-width: 640px) {
-  /* city / in · out / stay length / nights / guests · Search: the dates and their
-     length stay together, and Search is the last thing the thumb reaches. */
+  /* Source order, two columns: city, location, in · out, length, nights,
+     guests · bedrooms, price, euros, Search, the last thing the thumb reaches. */
   .trip { grid-template-columns: 1fr 1fr; padding: 14px; }
-  /* Same selectors as the tablet block, so these win on specificity, not by luck. */
-  .trip .stay-length, .trip-nights { grid-column: 1 / -1; grid-row: auto; }
-  .trip-guests { grid-column: 1; grid-row: auto; order: 1; }
-  .trip .search-btn { grid-column: 2; grid-row: auto; order: 1; }
+  .trip > .trip-city, .trip > .trip-location, .trip > .trip-stay, .trip > .trip-nights,
+  .trip > .trip-price, .trip > .trip-price-hint, .trip > .trip-search { grid-area: auto / 1 / auto / -1; }
+  .trip > .trip-in, .trip > .trip-guests { grid-area: auto / 1; }
+  .trip > .trip-out, .trip > .trip-beds { grid-area: auto / 2; }
+  .trip > .trip-search { width: 100%; }
   .filters { grid-template-columns: 1fr; padding: 16px 16px 0; }
   .filters-foot { margin: 4px -16px 0; padding: 12px 16px; flex-wrap: wrap; }
   .filters-foot .apply-btn { width: 100%; }

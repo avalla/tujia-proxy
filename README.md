@@ -41,20 +41,24 @@ opens a visible browser if you have a Chinese number to receive the SMS.
 
 Built for a foreign visitor who knows where they need to be and not much else about the city.
 
-- **The trip comes first.** City, check-in, check-out, guests and Search sit on one line. Under
-  the dates, **1 night · 1 week · 2 weeks · Custom** sets the length; with a preset picked,
-  moving the check-in moves the check-out with it. The default is today for one week, and
-  dates in the past are refused.
+- **The main row holds what every search needs**: city and best location, dates, guests and
+  bedrooms, the price range, and Search. Under the dates, **1 night · 1 week · 2 weeks ·
+  Custom** sets the length; with a preset picked, moving the check-in moves the check-out
+  with it. The default is today for one week, and dates in the past are refused.
+- **Price is entered in yuan**, because that is what Tujia filters on, with the euro range
+  shown live underneath at the same rate the cards use. A min above the max is caught
+  before the search goes out.
+- **Best location** lists, for each of the city's landmarks (the Canton Fair, Shenzhen
+  World, an airport…), the metro lines with a stop within 2 km, with the walk from that
+  stop. Picking one measures distances from that landmark and filters to the whole line,
+  capped at 1.5 km, since Tujia's own "near the line" reaches 4 km out. A station or line
+  set by hand in Filters shows here as "Custom".
 - **Everything else waits behind Filters.** A sentence beside the button says what is applied
-  ("Within 1.5 km of Line 8 · 1+ bedroom · Accepts foreign guests"), so the panel never has to
+  ("Within 1.5 km of Line 8 · Kitchen available · Accepts foreign guests"), so the panel never has to
   be opened just to check. The button counts what differs from the defaults; **Clear** puts
   them back.
 - **Accepts foreign guests is on by default.** Many hosts may not register foreign passports,
   so for this audience it is the safe starting point. Untick it to see everything.
-- **"Best lines for …"** lists the metro lines with a stop within 2 km of the place you picked
-  (the Canton Fair, Shenzhen World, an airport), with the walk from that stop. One click
-  filters to the whole line and caps the distance at 1.5 km, since Tujia's own "near the line"
-  reaches 4 km out.
 - **One field for a station**, with autocomplete in English or Chinese, instead of a
   400-option list. Amenities have their own search box ("parking", "washer").
 - **Sort sits above the results** and re-runs the search when changed. Results load as you

@@ -47,6 +47,7 @@ async function boot() {
   $('amenity-filter').addEventListener('input', filterAmenities);
   $('clear-btn').addEventListener('click', clearFilters);
   $('filters-toggle').addEventListener('click', () => setFiltersOpen($('filters').hidden));
+  $('bestLocation').addEventListener('change', onBestLocationChange);
   $('search-form').addEventListener('submit', onSubmit);
   // Any edit can change how many filters are active, so recount on all of them.
   $('search-form').addEventListener('input', syncClearButton);
@@ -91,6 +92,7 @@ async function loadCatalog(cityId) {
   renderSorts();
   renderAmenities();
   renderLandmarks();
+  renderBestLocation();
   syncLocationHint();
   syncClearButton();
 
@@ -227,101 +229,111 @@ function syncLandmark() {
     $('maxFair').value = '';
     $('maxFair').disabled = true;
     $('maxFair-label').textContent = 'Max distance to landmark';
-    renderLineAdvice(); // hides it: no landmark, nothing to advise on
+    syncBestLocation();
     return;
   }
   $('maxFair').disabled = false;
   $('maxFair-label').textContent = `Max distance to ${mark.name}`;
   $('landmark-badge-text').textContent = `${mark.name} reference`;
   $('landmark-badge').title = `Every listing shows its distance to ${mark.name} (${mark.nameCn})`;
-  renderLineAdvice();
+  syncBestLocation();
 }
 
-/** A line counts as serving the landmark if one of its stops is a walk away from it. */
+/** A line counts as serving a landmark if one of its stops is a walk away from it. */
 const ADVICE_MAX_KM = 2;
+/** Option value for "a location was set in Filters that this menu does not list". */
+const CUSTOM_LOCATION = 'custom';
 
 /**
- * The lines that stop near the current landmark, closest stop first, as one-click
- * line filters: staying anywhere along one of them means a direct ride there.
+ * "Best location": for each of the city's landmarks, the metro lines that stop near
+ * it, closest stop first. Staying anywhere along one means a direct ride there.
  * Straight-line distance over the catalog's own coordinates, the same bd09 points
  * the cards measure with, so the advice and the cards agree.
  */
-function renderLineAdvice() {
-  const box = $('line-advice');
-  box.textContent = '';
-  const mark = currentLandmark();
-  if (!mark || !catalog?.metroLines.length) {
-    box.hidden = true;
-    return;
-  }
+function renderBestLocation() {
+  const sel = $('bestLocation');
+  sel.textContent = '';
+  const add = (parent, value, text, disabled = false) => {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = text;
+    o.disabled = disabled;
+    parent.appendChild(o);
+    return o;
+  };
+  add(sel, '', `Anywhere in ${catalog.city.name}`);
 
-  // Branches repeat a line name; keep the segment whose stop is closest.
-  const byLine = new Map();
-  for (const line of catalog.metroLines) {
-    for (const s of line.stations) {
-      const d = kmBetween(s, mark);
-      const prev = byLine.get(line.en);
-      if (!prev || d < prev.d) byLine.set(line.en, { line, station: s, d });
-    }
-  }
-  const near = [...byLine.values()]
-    // Clickable needs a line filter id or a searchable stop to fall back on.
-    .filter((x) => x.d <= ADVICE_MAX_KM && (x.line.filterValue || x.station.value))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, 4);
-
-  box.hidden = false;
-  const title = document.createElement('p');
-  title.className = 'line-advice-title';
-  title.textContent = near.length
-    ? `Best lines for ${mark.name}`
-    : `No metro stop within ${ADVICE_MAX_KM} km of ${mark.name}`;
-  box.appendChild(title);
-  if (!near.length) {
-    // Saying so beats recommending a line whose nearest stop is a taxi ride away.
-    const p = document.createElement('p');
-    p.className = 'hint';
-    p.textContent = 'Use "Max distance" below to stay close to it instead.';
-    box.appendChild(p);
-    return;
-  }
-
-  for (const { line, station, d } of near) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'line-pick';
-    btn.dataset.line = line.filterValue || '';
-    const walk = Math.max(1, Math.ceil((d / 4.5) * 60)); // utils/geo.ts walkMinutes(), 4.5 km/h
-    btn.innerHTML =
-      `<span class="line">${esc(line.en)}</span>` +
-      `<span class="line-pick-stop">${esc(station.en.replace(/ Station$/, ''))}</span>` +
-      `<span class="line-pick-walk">${walk} min walk</span>`;
-    btn.title = `Stay anywhere along ${line.label}: its ${station.en} stop is ${d.toFixed(1)} km from ${mark.name}`;
-    btn.addEventListener('click', () => {
-      // A line without a whole-line filter id can still anchor on its nearest stop.
-      if (line.filterValue) {
-        $('station').value = '';
-        $('metroLine').value = $('metroLine').value === line.filterValue ? '' : line.filterValue;
-      } else {
-        $('metroLine').value = '';
-        $('station').value = `${station.en} · ${line.en}`;
+  for (const mark of catalog.city.landmarks || []) {
+    // Branches repeat a line name; keep the segment whose stop is closest.
+    const byLine = new Map();
+    for (const line of catalog.metroLines) {
+      if (!line.filterValue) continue; // the option filters the whole line
+      for (const s of line.stations) {
+        const d = kmBetween(s, mark);
+        const prev = byLine.get(line.en);
+        if (!prev || d < prev.d) byLine.set(line.en, { line, station: s, d });
       }
-      syncLocationHint();
-      // Tujia's own "near the line" reaches 4 km out (53 minutes on foot), which is
-      // no advice at all. Tighten it, unless the user already chose a radius.
-      if ($('metroLine').value && !$('maxLineKm').value) $('maxLineKm').value = '1.5';
-      syncClearButton();
-    });
-    box.appendChild(btn);
+    }
+    const near = [...byLine.values()]
+      .filter((x) => x.d <= ADVICE_MAX_KM)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 4);
+
+    const group = document.createElement('optgroup');
+    group.label = `Near ${mark.name}`;
+    if (!near.length) {
+      // Saying so beats recommending a line whose nearest stop is a taxi ride away.
+      add(group, '', `No metro stop within ${ADVICE_MAX_KM} km`, true);
+    }
+    for (const { line, station, d } of near) {
+      const walk = Math.max(1, Math.ceil((d / 4.5) * 60)); // utils/geo.ts walkMinutes(), 4.5 km/h
+      const o = add(group, `${mark.key}|${line.filterValue}`,
+        `${line.en} · ${station.en.replace(/ Station$/, '')}, ${walk} min walk`);
+      o.title = `Stay anywhere along ${line.label}: its ${station.en} stop is ${d.toFixed(1)} km from ${mark.name}`;
+    }
+    sel.appendChild(group);
   }
-  syncLineAdvice();
+  add(sel, CUSTOM_LOCATION, 'Custom, set in Filters').hidden = true;
+  sel.disabled = !catalog.metroLines.length;
+  syncBestLocation();
 }
 
-/** Mark the suggestion that matches the line filter, so it reads as a toggle. */
-function syncLineAdvice() {
-  for (const btn of $('line-advice').querySelectorAll('.line-pick')) {
-    btn.setAttribute('aria-pressed', String(Boolean(btn.dataset.line) && btn.dataset.line === $('metroLine').value));
+/** True while the location filters are exactly a Best location suggestion. */
+const pickedBestLocation = () => !['', CUSTOM_LOCATION].includes($('bestLocation').value);
+
+/** Pick a suggestion: measure from its landmark, filter to its line, keep it walkable. */
+function onBestLocationChange() {
+  const v = $('bestLocation').value;
+  if (v === CUSTOM_LOCATION) return setFiltersOpen(true);
+  $('station').value = '';
+  $('metroLine').value = '';
+  $('maxLineKm').value = '';
+  if (v) {
+    const [key, line] = v.split('|');
+    $('landmark').value = key;
+    syncLandmark();
+    $('metroLine').value = line;
   }
+  syncLocationHint();
+  // Tujia's own "near the line" reaches 4 km out (53 minutes on foot), which is no
+  // advice at all, so a suggestion always comes with a walkable radius.
+  if (v) $('maxLineKm').value = '1.5';
+  syncClearButton();
+}
+
+/**
+ * Reflect the location filters back into the menu, whichever control set them: the
+ * matching suggestion, "Anywhere", or "Custom" for a station or line it does not list.
+ */
+function syncBestLocation() {
+  const sel = $('bestLocation');
+  if (!sel.options.length) return; // not rendered yet
+  const line = $('metroLine').value;
+  const match = line && [...sel.options].find((o) => o.value === `${$('landmark').value}|${line}`);
+  const custom = sel.querySelector(`option[value="${CUSTOM_LOCATION}"]`);
+  const isCustom = !match && Boolean(line || $('station').value.trim());
+  custom.hidden = !isCustom;
+  sel.value = match ? match.value : isCustom ? CUSTOM_LOCATION : '';
 }
 
 /** Whole-line options. Only lines Tujia gives a 全线 filter id for are selectable. */
@@ -353,7 +365,7 @@ function syncLocationHint() {
 
   // The line-distance filter only means anything with a line selected, so it appears
   // and disappears with one rather than sitting there inert.
-  syncLineAdvice();
+  syncBestLocation();
   const lineActive = !station && Boolean(line.value);
   $('lineDistance-field').hidden = !lineActive;
   if (!lineActive) $('maxLineKm').value = '';
@@ -529,17 +541,21 @@ function filterAmenities() {
   $('amenity-empty').hidden = !term || any;
 }
 
-/** Every departure from the defaults, beyond city, dates and guests. */
+/**
+ * Every departure from the defaults that lives behind the Filters button. Price and
+ * bedrooms sit in the main row, always in view, so like the dates they are not counted.
+ */
 function activeFilterCount() {
   // A default filter counts only once unticked: that is the change Clear would undo.
   let n = 0;
   for (const cb of document.querySelectorAll('#amenity-groups input')) {
     if (cb.checked !== DEFAULT_AMENITIES.has(cb.value)) n++;
   }
-  if (Number($('bedrooms').value)) n++;
-  if (Number($('priceMin').value) > 0 || Number($('priceMax').value) !== 300) n++;
-  if ($('station').value.trim() || $('metroLine').value) n++;
-  if ($('maxLineKm').value) n++;
+  // A suggestion picked from Best location is a main-row choice, in view like price.
+  if (!pickedBestLocation()) {
+    if ($('station').value.trim() || $('metroLine').value) n++;
+    if ($('maxLineKm').value) n++;
+  }
   if ($('maxFair').value) n++;
   return n;
 }
@@ -567,14 +583,10 @@ function describeActiveFilters() {
   else if (line) bits.push($('maxLineKm').value ? `within ${$('maxLineKm').value} km of ${line}` : `along ${line}`);
   const mark = currentLandmark();
   if ($('maxFair').value && mark) bits.push(`within ${$('maxFair').value} km of ${mark.name}`);
-  const min = Number($('priceMin').value) || 0, max = Number($('priceMax').value) || 0;
-  if (min > 0 || max !== 300) bits.push(min > 0 ? `¥${min}–${max}/night` : `up to ¥${max}/night`);
-  const beds = Number($('bedrooms').value);
-  if (beds) bits.push(`${beds}+ bedroom${beds === 1 ? '' : 's'}`);
   for (const cb of document.querySelectorAll('#amenity-groups input:checked')) {
     bits.push(cb.nextElementSibling.textContent);
   }
-  if (!bits.length) return 'No filters: everything in the city within ¥300 a night.';
+  if (!bits.length) return 'No filters: anywhere in the city.';
   const shown = bits.slice(0, 4);
   const more = bits.length - shown.length;
   const text = shown.join(' · ') + (more ? ` · +${more} more` : '');
@@ -587,20 +599,21 @@ function setFiltersOpen(open) {
   $('filters-toggle').setAttribute('aria-expanded', String(open));
 }
 
-/** Back to the defaults. City, dates and guests are the trip, not filters, so they stay. */
+/**
+ * Back to the defaults for what is behind Filters. The main row (the trip, price,
+ * bedrooms, a Best location pick) stays as the visitor set it, since it is all in view.
+ */
 function clearFilters() {
-  $('bedrooms').value = '0';
-  $('priceMin').value = '0';
-  $('priceMax').value = '300';
-  $('station').value = '';
-  $('metroLine').value = '';
-  $('maxLineKm').value = '';
+  if (!pickedBestLocation()) {
+    $('station').value = '';
+    $('metroLine').value = '';
+    $('maxLineKm').value = '';
+  }
   $('maxFair').value = '';
   $('amenity-filter').value = '';
   for (const cb of document.querySelectorAll('#amenity-groups input')) cb.checked = DEFAULT_AMENITIES.has(cb.value);
   $('amenity-groups').querySelectorAll('details').forEach(syncGroupCount);
   filterAmenities();
-  updatePriceHint();
   syncLocationHint();
   syncClearButton();
 }
@@ -640,10 +653,20 @@ function updateNights() {
   $('nights').textContent = `${nights} night${nights === 1 ? '' : 's'} · ${fmt(a)} → ${fmt(b)}`;
 }
 
+/**
+ * The price is entered in yuan, because that is what Tujia filters on, and converted
+ * live at the same fixed rate the cards use, so the two always agree.
+ */
 function updatePriceHint() {
   const min = Number($('priceMin').value) || 0;
   const max = Number($('priceMax').value) || 0;
-  $('price-hint').textContent = `≈ €${Math.round(min * CNY_TO_EUR)}–€${Math.round(max * CNY_TO_EUR)} per night`;
+  const eur = (cny) => `€${Math.round(cny * CNY_TO_EUR)}`;
+  const inverted = max > 0 && min > max;
+  $('priceMax').setCustomValidity(inverted ? 'Max must be at least the min.' : '');
+  $('price-hint').textContent = inverted
+    ? 'Max must be at least the min.'
+    : `≈ ${eur(min)} – ${eur(max)} a night`;
+  $('price-hint').classList.toggle('error', inverted);
 }
 
 const esc = (s) =>

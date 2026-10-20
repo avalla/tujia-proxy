@@ -36,27 +36,26 @@
 
     <form id="search-form">
 
-      <!-- The trip: the only four things every search needs. Always in view. -->
+      <!-- The main row: where, when, who, how much. Always in view. Source order is
+           that reading order (and the phone's); the grid places it on wider screens. -->
       <div class="trip">
         <label class="field trip-city">
           <span>City</span>
           <select id="city"></select>
         </label>
-        <label class="field">
+        <label class="field trip-location">
+          <span>Best location</span>
+          <select id="bestLocation"></select>
+        </label>
+        <label class="field trip-in">
           <span>Check in</span>
           <input type="date" id="checkIn" required>
         </label>
-        <label class="field">
+        <label class="field trip-out">
           <span>Check out</span>
           <input type="date" id="checkOut" required>
         </label>
-        <label class="field trip-guests">
-          <span>Guests</span>
-          <select id="guestCount"></select>
-        </label>
-        <button type="submit" class="search-btn" id="search-btn">Search</button>
-
-        <fieldset class="stay-length" id="stay-length">
+        <fieldset class="stay-length trip-stay" id="stay-length">
           <legend class="sr-only">Length of stay</legend>
           <div class="segmented">
             <label><input type="radio" name="stay" value="1"><span>1 night</span></label>
@@ -66,6 +65,24 @@
           </div>
         </fieldset>
         <p class="hint trip-nights" id="nights"></p>
+        <label class="field trip-guests">
+          <span>Guests</span>
+          <select id="guestCount"></select>
+        </label>
+        <label class="field trip-beds">
+          <span>Bedrooms</span>
+          <select id="bedrooms"></select>
+        </label>
+        <div class="field trip-price" role="group" aria-labelledby="price-label">
+          <span id="price-label">Price a night, ¥</span>
+          <div class="price-range">
+            <input type="number" id="priceMin" value="0" min="0" step="10" inputmode="numeric" aria-label="Minimum price a night, yuan">
+            <span aria-hidden="true">–</span>
+            <input type="number" id="priceMax" value="300" min="0" step="10" inputmode="numeric" aria-label="Maximum price a night, yuan">
+          </div>
+        </div>
+        <p class="hint trip-price-hint" id="price-hint" aria-live="polite"></p>
+        <button type="submit" class="search-btn trip-search" id="search-btn">Search</button>
       </div>
 
       <!-- Refinements, folded until asked for. The sentence says what is applied, so
@@ -80,32 +97,11 @@
 
       <div class="filters" id="filters" hidden>
       <section class="field-group">
-        <h2>Budget &amp; rooms</h2>
-        <label class="field">
-          <span>Bedrooms</span>
-          <select id="bedrooms"></select>
-        </label>
-        <div class="row">
-          <label class="field">
-            <span>Min ¥ / night</span>
-            <input type="number" id="priceMin" value="0" min="0" step="10" inputmode="numeric">
-          </label>
-          <label class="field">
-            <span>Max ¥ / night</span>
-            <input type="number" id="priceMax" value="300" min="0" step="10" inputmode="numeric">
-          </label>
-        </div>
-        <p class="hint" id="price-hint"></p>
-      </section>
-
-      <section class="field-group">
         <h2>Location</h2>
         <label class="field" id="landmark-field" hidden>
-          <span>Where you need to be</span>
+          <span>Measure distances from</span>
           <select id="landmark"></select>
         </label>
-        <!-- Filled by renderLineAdvice(): the lines that stop near that landmark. -->
-        <div class="line-advice" id="line-advice" hidden></div>
         <label class="field">
           <span>Near metro station</span>
           <input type="search" id="station" list="station-list" placeholder="Type a station name" autocomplete="off" spellcheck="false">

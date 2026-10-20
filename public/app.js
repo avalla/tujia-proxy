@@ -264,7 +264,8 @@ function renderLineAdvice() {
     }
   }
   const near = [...byLine.values()]
-    .filter((x) => x.d <= ADVICE_MAX_KM)
+    // Clickable needs a line filter id or a searchable stop to fall back on.
+    .filter((x) => x.d <= ADVICE_MAX_KM && (x.line.filterValue || x.station.value))
     .sort((a, b) => a.d - b.d)
     .slice(0, 4);
 
@@ -384,6 +385,7 @@ function renderStations() {
   stationByLabel = new Map();
   for (const line of catalog ? catalog.metroLines : []) {
     for (const s of line.stations) {
+      if (!s.value) continue; // an extraStations entry: no Tujia id to search it by
       const label = `${s.en} · ${line.en}`;
       if (stationByLabel.has(label)) continue; // a branch segment repeating its trunk
       stationByLabel.set(label, s);
@@ -934,7 +936,8 @@ function offerLandmarkStations() {
 
   // Interchange stations appear once per line with different filter ids; keep the nearest.
   const byName = new Map();
-  for (const s of allStations.map((s) => ({ ...s, d: kmBetween(s, mark) }))) {
+  // Only searchable stops: each chip runs a station search.
+  for (const s of allStations.filter((s) => s.value).map((s) => ({ ...s, d: kmBetween(s, mark) }))) {
     const prev = byName.get(s.en);
     if (!prev || s.d < prev.d) byName.set(s.en, s);
   }

@@ -5,6 +5,7 @@
 // cityId picks its own metro network, districts and filter vocabulary.
 
 import type { Catalog, CatalogPlace } from './types';
+import { withExtraStations } from './cities';
 import GUANGZHOU from './guangzhou.generated';
 import SHENZHEN from './shenzhen.generated';
 import SHANGHAI from './shanghai.generated';
@@ -19,17 +20,18 @@ import SUZHOU from './suzhou.generated';
 export * from './types';
 export * from './cities';
 
+/** Tujia's taxonomy, plus the few stations it omits (`extraStations` in cities.ts). */
 export const CATALOGS: Record<string, Catalog> = {
-  "45": GUANGZHOU,
-  "49": SHENZHEN,
-  "23": SHANGHAI,
-  "48": BEIJING,
-  "22": CHONGQING,
-  "10": CHENGDU,
-  "7": HANGZHOU,
-  "17": XIAN,
-  "9": NANJING,
-  "11": SUZHOU,
+  "45": withExtraStations("45", GUANGZHOU),
+  "49": withExtraStations("49", SHENZHEN),
+  "23": withExtraStations("23", SHANGHAI),
+  "48": withExtraStations("48", BEIJING),
+  "22": withExtraStations("22", CHONGQING),
+  "10": withExtraStations("10", CHENGDU),
+  "7": withExtraStations("7", HANGZHOU),
+  "17": withExtraStations("17", XIAN),
+  "9": withExtraStations("9", NANJING),
+  "11": withExtraStations("11", SUZHOU),
 };
 
 /** Every catalog we shipped, in registry order. */

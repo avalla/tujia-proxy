@@ -8,7 +8,7 @@ An English-language proxy over Tujia (途家, m.tujia.com), a Chinese short-term
 
 Every city-specific fact lives in one of two places, and nowhere else:
 
-- `src/catalog/cities.ts` — hand-written registry: Tujia cityId, names, pinyin, centre coordinates, and the distance anchors ("landmarks") the UI offers.
+- `src/catalog/cities.ts` — hand-written registry: Tujia cityId, names, pinyin, centre coordinates, the distance anchors ("landmarks") the UI offers, and `extraStations` — the rare station Tujia's taxonomy omits (Beijing's Daxing Airport terminus). Those are spliced in by `withExtraStations()` at load time, carry an empty `value` (not searchable, geometry only), and survive regeneration because the generated files never contain them.
 - `src/catalog/<slug>.generated.ts` — one generated catalog per city: metro lines and stations, districts, attractions, filters, sort orders, price bands.
 
 `src/catalog/index.ts` joins the two; `getCatalog(cityId)` and `allStations(cityId)` are the entry points. Nothing outside the catalog directory should hardcode a cityId, a district name, or a landmark coordinate.
@@ -262,6 +262,7 @@ The scraper solves the same problem properly: `storage/tujia-state.json` (gitign
 
 - `middleware/cache.ts` exports a `cacheMiddleware` that nothing mounts — `routes/search.ts` calls `getCache`/`setCache` manually instead. The `NodeCache` TTL there is hardcoded to 300s and ignores `CONFIG.CACHE_TTL`.
 - The Playwright scraper is still single-shape: it takes `--city` through the registry now, but `extractHotels()` has no city context, so its `ScrapedHotel` output carries no nearest-station or landmark distance. The HTTP path is the one that is multi-city end to end.
+- **Do not regenerate a catalog on an anonymous session.** On 2026-10-20 `bun run catalog -- --city beijing` with a freshly minted anonymous session returned the metro network intact but **0 districts and 0 filters**, and the generator wrote that out, wiping the city's whole filter vocabulary. Check `git diff --stat src/catalog` after every run and revert if the filter count collapsed.
 
 ## `errcode 55999` — it is never a rate limit
 

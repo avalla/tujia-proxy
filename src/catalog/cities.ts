@@ -18,6 +18,8 @@
  *    construction and measuring them against unit coordinates needs no conversion.
  */
 
+import type { Catalog } from './types';
+
 export interface Landmark {
   /** Stable key used on the wire (`landmarkKey` on a search request). */
   key: string;
@@ -27,6 +29,22 @@ export interface Landmark {
   value: string;
   lng: number;
   lat: number;
+}
+
+/**
+ * A station that exists but that Tujia's taxonomy leaves out, so no generator run can
+ * produce it. It has no Tujia filter id and so cannot be searched on; it exists for
+ * geometry only — nearest-station on cards and the line advice in the UI.
+ */
+export interface ExtraStation {
+  /** The line's Chinese name exactly as the catalog has it (`MetroLine.cn`). */
+  line: string;
+  cn: string;
+  en: string;
+  lng: number;
+  lat: number;
+  /** Where the coordinates come from, since they cannot come from a station entry. */
+  source: string;
 }
 
 export interface City {
@@ -41,6 +59,7 @@ export interface City {
   lat: number;
   /** First entry is the default anchor for distance filtering. Never empty. */
   landmarks: Landmark[];
+  extraStations?: ExtraStation[];
 }
 
 export const CITIES: City[] = [
@@ -157,15 +176,17 @@ export const CITIES: City[] = [
         lat: 39.90977,
       },
       {
-        // Tujia has no standalone entry for 新国展; the closest is the 商圈 that
-        // covers the airport and the exhibition centre together, so this point sits
-        // between the two rather than on the venue itself.
+        // Tujia has no standalone entry for 新国展. This used to be the 商圈 covering
+        // the airport and the venue together (8_81728, 116.59454, 40.08726), which sat
+        // ~3 km east beside Terminal 2 and made the airport line look like the way to
+        // the fair. Guozhan station (Line 15) is the venue's own stop, at its south
+        // gate, so it is the closer bd09 point Tujia actually ships.
         key: 'ciec-shunyi',
         name: 'New China Intl Exhibition Centre (Shunyi)',
-        nameCn: '首都机场/新国展地区',
-        value: '8_81728',
-        lng: 116.59454,
-        lat: 40.08726,
+        nameCn: '新国展 (国展地铁站)',
+        value: '1_271105',
+        lng: 116.56172,
+        lat: 40.075928,
       },
       {
         key: 'capital-airport',
@@ -182,6 +203,19 @@ export const CITIES: City[] = [
         value: '2_70179291',
         lng: 116.43569,
         lat: 39.5199,
+      },
+    ],
+    extraStations: [
+      {
+        // Tujia lists only Caoqiao and Daxingxincheng on 大兴机场线 (rechecked
+        // 2026-10-20), dropping the terminus the line exists for. The station is
+        // under the terminal, so the airport's own taxonomy point stands in for it.
+        line: '大兴机场线',
+        cn: '大兴机场地铁站',
+        en: 'Daxing Airport Station',
+        lng: 116.43569,
+        lat: 39.5199,
+        source: '2_70179291 (北京大兴国际机场)',
       },
     ],
   },
@@ -370,6 +404,26 @@ export const CITIES: City[] = [
     ],
   },
 ];
+
+/**
+ * Splice a city's `extraStations` into its generated catalog, onto the line they
+ * belong to. Called from `index.ts` for every city, so the generated files stay pure
+ * Tujia output and a regeneration can never drop the fix. The added stations carry
+ * an empty `value`: there is no Tujia filter id to search them by.
+ */
+export function withExtraStations(cityId: string, catalog: Catalog): Catalog {
+  const extras = BY_ID.get(cityId)?.extraStations;
+  if (!extras?.length) return catalog;
+  const metroLines = catalog.metroLines.map((line) => {
+    const add = extras.filter((x) => x.line === line.cn && !line.stations.some((s) => s.cn === x.cn));
+    if (!add.length) return line; // Tujia has caught up, or the line is not this one
+    return {
+      ...line,
+      stations: [...line.stations, ...add.map(({ cn, en, lng, lat }) => ({ value: '', cn, en, lng, lat }))],
+    };
+  });
+  return { ...catalog, metroLines };
+}
 
 export const DEFAULT_CITY_ID = '45';
 

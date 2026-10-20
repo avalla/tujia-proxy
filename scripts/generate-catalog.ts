@@ -526,7 +526,9 @@ function writeIndex(cities: City[]): void {
   const imports = cities
     .map((c) => `import ${c.slug.toUpperCase()} from './${c.slug}.generated';`)
     .join('\n');
-  const entries = cities.map((c) => `  ${JSON.stringify(c.id)}: ${c.slug.toUpperCase()},`).join('\n');
+  const entries = cities
+    .map((c) => `  ${JSON.stringify(c.id)}: withExtraStations(${JSON.stringify(c.id)}, ${c.slug.toUpperCase()}),`)
+    .join('\n');
 
   writeFileSync(
     'src/catalog/index.ts',
@@ -537,11 +539,13 @@ function writeIndex(cities: City[]): void {
 // cityId picks its own metro network, districts and filter vocabulary.
 
 import type { Catalog, CatalogPlace } from './types';
+import { withExtraStations } from './cities';
 ${imports}
 
 export * from './types';
 export * from './cities';
 
+/** Tujia's taxonomy, plus the few stations it omits (\`extraStations\` in cities.ts). */
 export const CATALOGS: Record<string, Catalog> = {
 ${entries}
 };

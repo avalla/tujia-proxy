@@ -46,6 +46,7 @@ async function boot() {
   });
   $('amenity-filter').addEventListener('input', filterAmenities);
   $('clear-btn').addEventListener('click', clearFilters);
+  $('filters-toggle').addEventListener('click', () => setFiltersOpen($('filters').hidden));
   $('search-form').addEventListener('submit', onSubmit);
   // Any edit can change how many filters are active, so recount on all of them.
   $('search-form').addEventListener('input', syncClearButton);
@@ -543,10 +544,47 @@ function activeFilterCount() {
   return n;
 }
 
+/** Keep Clear, the count on the Filters button and the summary sentence in step. */
 function syncClearButton() {
   const n = activeFilterCount();
   $('clear-btn').hidden = n === 0;
-  $('clear-btn').textContent = n === 1 ? 'Clear 1 filter' : `Clear ${n} filters`;
+  $('filters-count').hidden = n === 0;
+  $('filters-count').textContent = String(n);
+  $('filters-toggle').setAttribute('aria-label', n ? `Filters, ${n} changed` : 'Filters');
+  $('active-summary').textContent = describeActiveFilters();
+}
+
+/**
+ * What is applied, in words, so the folded panel never has to be opened just to
+ * check. Defaults count too: "Accepts foreign guests" is a filter the visitor should
+ * know is on.
+ */
+function describeActiveFilters() {
+  const bits = [];
+  const station = selectedStation();
+  const line = $('metroLine').value && $('metroLine').selectedOptions[0]?.textContent.split(' · ')[0];
+  if (station) bits.push(`near ${station.en.replace(/ Station$/, '')}`);
+  else if (line) bits.push($('maxLineKm').value ? `within ${$('maxLineKm').value} km of ${line}` : `along ${line}`);
+  const mark = currentLandmark();
+  if ($('maxFair').value && mark) bits.push(`within ${$('maxFair').value} km of ${mark.name}`);
+  const min = Number($('priceMin').value) || 0, max = Number($('priceMax').value) || 0;
+  if (min > 0 || max !== 300) bits.push(min > 0 ? `¥${min}–${max}/night` : `up to ¥${max}/night`);
+  const beds = Number($('bedrooms').value);
+  if (beds) bits.push(`${beds}+ bedroom${beds === 1 ? '' : 's'}`);
+  for (const cb of document.querySelectorAll('#amenity-groups input:checked')) {
+    bits.push(cb.nextElementSibling.textContent);
+  }
+  if (!bits.length) return 'No filters: everything in the city within ¥300 a night.';
+  const shown = bits.slice(0, 4);
+  const more = bits.length - shown.length;
+  const text = shown.join(' · ') + (more ? ` · +${more} more` : '');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** The refinements panel folds inline under the trip row; no modal. */
+function setFiltersOpen(open) {
+  $('filters').hidden = !open;
+  $('filters-toggle').setAttribute('aria-expanded', String(open));
 }
 
 /** Back to the defaults. City, dates and guests are the trip, not filters, so they stay. */
@@ -645,6 +683,7 @@ async function onSubmit(event) {
   }
   const station = selectedStation();
   if ($('station').value.trim() && !station) {
+    setFiltersOpen(true); // a folded field cannot show its own error
     $('station').setCustomValidity('Pick a station from the list, or clear the field.');
     $('station').reportValidity();
     return;
@@ -677,8 +716,14 @@ async function onSubmit(event) {
 
   paging = { body, nextPageIndex: null, seen: new Set(), loading: false };
 
+  // The results are what they came for now. Folding a tall filters panel would leave
+  // the page scrolled past the top of the results, so bring the search back to the top.
+  const filtersWereOpen = !$('filters').hidden;
+  setFiltersOpen(false);
   if (matchMedia('(max-width: 900px)').matches) {
     setPanelCollapsed(true);
+    $('panel').scrollIntoView({ block: 'start' });
+  } else if (filtersWereOpen) {
     $('panel').scrollIntoView({ block: 'start' });
   }
   setLoading(true);

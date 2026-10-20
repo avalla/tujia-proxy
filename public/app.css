@@ -98,26 +98,67 @@ body {
 .cny.masked { font-style: italic; opacity: .85; }
 .summary .warn { color: var(--ink-2); font-style: italic; }
 
-/* ── layout ──────────────────────────────────────────────────────── */
-.layout {
+/* ── search: the trip row, a refine row, and a folded filters panel ── */
+.search { padding: 24px 0 4px; scroll-margin-top: 76px; /* clears the sticky top bar */ }
+
+/* City, dates, guests and Search on one line; the stay length sits under the dates
+   it drives. Everything else waits behind the Filters button. */
+.trip {
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr);
-  gap: 28px;
-  align-items: start;
-  padding-top: 26px; padding-bottom: 40px;
+  grid-template-columns: minmax(170px, 1.3fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(110px, .7fr) auto;
+  align-items: end; gap: 8px 12px;
+  padding: 14px 16px 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+}
+.trip .field { margin: 0; min-width: 0; }
+.trip .field input, .trip .field select { height: 42px; }
+.trip .search-btn { height: 42px; padding: 0 28px; }
+.trip .stay-length { grid-column: 2 / span 2; margin: 0; }
+.trip-nights { grid-column: 4 / -1; align-self: center; margin: 0; }
+
+.refine { display: flex; align-items: center; gap: 12px; margin-top: 12px; min-height: 36px; }
+.filters-toggle {
+  flex: none; display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 14px;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px;
+  cursor: pointer;
+}
+.filters-toggle:hover { border-color: var(--ink-3); }
+.filters-toggle[aria-expanded="true"] { border-color: var(--ink); }
+.filters-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.filters-count {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+  display: inline-grid; place-items: center;
+  font-size: 11.5px; background: var(--ink); color: var(--surface);
+}
+.filters-count[hidden] { display: none; }
+.active-summary {
+  flex: 1; min-width: 0; margin: 0;
+  font-size: 13px; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ── search panel ────────────────────────────────────────────────── */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  /* No bottom padding: the sticky action bar sits flush on the panel's bottom edge. */
-  padding: 18px 18px 0;
-  position: sticky; top: 82px;
-  max-height: calc(100vh - 106px);
-  overflow-y: auto;
+.filters {
+  display: grid; grid-template-columns: 1fr 1.25fr 1.25fr; gap: 8px 32px;
+  margin-top: 12px; padding: 20px 20px 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
 }
+.filters[hidden] { display: none; }
+.filters-foot {
+  grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin: 4px -20px 0; padding: 12px 20px; border-top: 1px solid var(--line);
+}
+.filters-foot .catalog-note { margin: 0; }
+.apply-btn {
+  flex: none; height: 40px; padding: 0 22px;
+  font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 8px; cursor: pointer;
+}
+.apply-btn:hover { filter: brightness(1.06); }
+.apply-btn:focus-visible, .search-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.results { padding: 20px 0 40px; }
 
 .field-group { margin-bottom: 22px; }
 .field-group h2 {
@@ -195,15 +236,8 @@ body {
 .line-pick-stop { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .line-pick-walk { flex: none; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
-/* ── sticky action bar ───────────────────────────────────────────── */
-.panel-actions {
-  position: sticky; bottom: 0; z-index: 1;
-  margin: 0 -18px; padding: 12px 18px 14px;
-  background: var(--surface); border-top: 1px solid var(--line);
-  display: flex; flex-direction: column; gap: 6px;
-}
 .clear-btn {
-  align-self: center;
+  flex: none;
   font: inherit; font-size: 13px; color: var(--ink-2);
   background: none; border: 0; padding: 4px 8px; cursor: pointer;
   text-decoration: underline; text-underline-offset: 3px;
@@ -241,7 +275,7 @@ body {
 .amenities input { margin: 2px 0 0; accent-color: var(--accent); flex: none; }
 
 .search-btn {
-  width: 100%; height: 40px;
+  height: 40px;
   font: inherit; font-size: 14px; font-weight: 600;
   color: var(--accent-ink); background: var(--accent);
   border: 0; border-radius: 8px; cursor: pointer;
@@ -411,34 +445,62 @@ body {
 @media (prefers-reduced-motion: reduce) { .skeleton .sk { animation: none; } }
 
 /* ── responsive ──────────────────────────────────────────────────── */
+/* Tablet: the trip row wraps to two lines, the filters to two columns. */
+@media (max-width: 1080px) {
+  /* city / in · out · guests / stay length · Search / nights */
+  .trip { grid-template-columns: 1fr 1fr 1fr; }
+  .trip-city { grid-column: 1 / -1; }
+  .trip-guests { grid-column: 3; grid-row: 2; }
+  .trip .stay-length { grid-column: 1 / span 2; grid-row: 3; }
+  .trip .search-btn { grid-column: 3; grid-row: 3; }
+  .trip-nights { grid-column: 1 / -1; grid-row: 4; }
+  .filters { grid-template-columns: 1fr 1fr; }
+  .filters .field-group:last-of-type { grid-column: 1 / -1; }
+}
+
 @media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr; padding-top: 16px; gap: 16px; }
-  /* Not a scroll box any more, so the action bar sticks to the viewport's bottom
-     while the form is on screen. */
-  .panel { position: static; max-height: none; overflow: visible; scroll-margin-top: 80px; }
+  .search { padding-top: 16px; scroll-margin-top: 80px; }
   .wrap { padding: 0 16px; }
   /* 16px stops iOS Safari zooming the page on every field tap. */
   .field input, .field select, .sort-field select { font-size: 16px; height: 44px; }
+  .trip .field input, .trip .field select { height: 46px; }
+  .trip .search-btn { height: 46px; font-size: 16px; }
   .amenities label { padding: 6px 0; font-size: 14px; }
   .stay-length span { height: 40px; font-size: 14px; }
   .line-pick { min-height: 44px; font-size: 14px; }
-  .search-btn { height: 48px; font-size: 16px; }
+  .filters-toggle, .clear-btn { min-height: 44px; }
+  .apply-btn { height: 46px; font-size: 16px; }
 
   .panel-summary {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    width: 100%; min-height: 44px; margin-bottom: 14px; padding: 0;
+    width: 100%; min-height: 52px; padding: 8px 16px;
     font: inherit; font-size: 14px; color: var(--ink); text-align: left;
-    background: none; border: 0; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
   }
-  .panel:not(.collapsed) .panel-summary { display: none; }
-  .panel.collapsed { padding: 4px 16px; }
-  .panel.collapsed .panel-summary { margin-bottom: 0; }
-  .panel.collapsed form { display: none; }
+  .search:not(.collapsed) .panel-summary { display: none; }
+  .search.collapsed form { display: none; }
   .panel-summary-action { flex: none; font-weight: 600; color: var(--accent); }
 
   .topbar-inner { padding-top: 10px; padding-bottom: 10px; }
   .tagline { display: none; }
 }
+
+@media (max-width: 640px) {
+  /* city / in · out / stay length / nights / guests · Search: the dates and their
+     length stay together, and Search is the last thing the thumb reaches. */
+  .trip { grid-template-columns: 1fr 1fr; padding: 14px; }
+  /* Same selectors as the tablet block, so these win on specificity, not by luck. */
+  .trip .stay-length, .trip-nights { grid-column: 1 / -1; grid-row: auto; }
+  .trip-guests { grid-column: 1; grid-row: auto; order: 1; }
+  .trip .search-btn { grid-column: 2; grid-row: auto; order: 1; }
+  .filters { grid-template-columns: 1fr; padding: 16px 16px 0; }
+  .filters-foot { margin: 4px -16px 0; padding: 12px 16px; flex-wrap: wrap; }
+  .filters-foot .apply-btn { width: 100%; }
+  /* The sentence wraps on a phone rather than hiding most of itself. */
+  .refine { flex-wrap: wrap; }
+  .active-summary { flex-basis: 100%; order: 3; white-space: normal; }
+}
+
 @media (max-width: 520px) {
   .fair-badge { display: none; }
   .sort-field { margin-left: 0; width: 100%; }

@@ -23,12 +23,12 @@
   </div>
 </header>
 
-<main class="wrap layout">
+<main class="wrap">
 
-  <!-- ── Search panel ─────────────────────────────────────────────── -->
-  <aside class="panel" id="panel">
+  <!-- ── Search ───────────────────────────────────────────────────── -->
+  <section class="search" id="panel" aria-label="Search">
     <!-- Phone only: once a search has run, the form folds to this one line so the
-         results are on the first screen instead of under twenty controls. -->
+         results are on the first screen. -->
     <button type="button" class="panel-summary" id="panel-summary" aria-controls="search-form" aria-expanded="true">
       <span class="panel-summary-text" id="panel-summary-text"></span>
       <span class="panel-summary-action">Edit search</span>
@@ -36,14 +36,28 @@
 
     <form id="search-form">
 
-      <section class="field-group">
-        <h2>Where &amp; when</h2>
-        <label class="field">
+      <!-- The trip: the only four things every search needs. Always in view. -->
+      <div class="trip">
+        <label class="field trip-city">
           <span>City</span>
           <select id="city"></select>
         </label>
+        <label class="field">
+          <span>Check in</span>
+          <input type="date" id="checkIn" required>
+        </label>
+        <label class="field">
+          <span>Check out</span>
+          <input type="date" id="checkOut" required>
+        </label>
+        <label class="field trip-guests">
+          <span>Guests</span>
+          <select id="guestCount"></select>
+        </label>
+        <button type="submit" class="search-btn" id="search-btn">Search</button>
+
         <fieldset class="stay-length" id="stay-length">
-          <legend>Length of stay</legend>
+          <legend class="sr-only">Length of stay</legend>
           <div class="segmented">
             <label><input type="radio" name="stay" value="1"><span>1 night</span></label>
             <label><input type="radio" name="stay" value="7" checked><span>1 week</span></label>
@@ -51,31 +65,26 @@
             <label><input type="radio" name="stay" value=""><span>Custom</span></label>
           </div>
         </fieldset>
-        <div class="row">
-          <label class="field">
-            <span>Check in</span>
-            <input type="date" id="checkIn" required>
-          </label>
-          <label class="field">
-            <span>Check out</span>
-            <input type="date" id="checkOut" required>
-          </label>
-        </div>
-        <p class="hint" id="nights"></p>
-      </section>
+        <p class="hint trip-nights" id="nights"></p>
+      </div>
 
+      <!-- Refinements, folded until asked for. The sentence says what is applied, so
+           the panel never has to be opened just to check. -->
+      <div class="refine">
+        <button type="button" class="filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters">
+          Filters <span class="filters-count" id="filters-count" hidden></span>
+        </button>
+        <p class="active-summary" id="active-summary"></p>
+        <button type="button" class="clear-btn" id="clear-btn" hidden>Clear</button>
+      </div>
+
+      <div class="filters" id="filters" hidden>
       <section class="field-group">
-        <h2>Guests &amp; budget</h2>
-        <div class="row">
-          <label class="field">
-            <span>Guests</span>
-            <select id="guestCount"></select>
-          </label>
-          <label class="field">
-            <span>Bedrooms</span>
-            <select id="bedrooms"></select>
-          </label>
-        </div>
+        <h2>Budget &amp; rooms</h2>
+        <label class="field">
+          <span>Bedrooms</span>
+          <select id="bedrooms"></select>
+        </label>
         <div class="row">
           <label class="field">
             <span>Min ¥ / night</span>
@@ -134,7 +143,7 @@
       </section>
 
       <section class="field-group">
-        <h2>Filters</h2>
+        <h2>Amenities</h2>
         <label class="field">
           <span class="sr-only">Find a filter</span>
           <input type="search" id="amenity-filter" placeholder="Find a filter, e.g. parking, washer" autocomplete="off">
@@ -143,16 +152,13 @@
         <p class="hint" id="amenity-empty" hidden>No filter matches that.</p>
       </section>
 
-      <p class="catalog-note" id="catalog-note"></p>
-
-      <!-- Sticky, so the one action is never more than a glance away however far the
-           filter list has been scrolled. -->
-      <div class="panel-actions">
-        <button type="submit" class="search-btn" id="search-btn">Search</button>
-        <button type="button" class="clear-btn" id="clear-btn" hidden>Clear filters</button>
+      <div class="filters-foot">
+        <p class="catalog-note" id="catalog-note"></p>
+        <button type="submit" class="apply-btn">Show stays</button>
+      </div>
       </div>
     </form>
-  </aside>
+  </section>
 
   <!-- ── Results ──────────────────────────────────────────────────── -->
   <section class="results" id="results">
